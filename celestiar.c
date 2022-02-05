@@ -124,16 +124,16 @@ void pressKeySpec(int key, int x, int y)
 {
 	switch (key)
 	{
-		case GLUT_KEY_LEFT :
+/*		case GLUT_KEY_LEFT :
 			left1 = 1;
 			break;
 		case GLUT_KEY_RIGHT :
 			right1 = 1;
-			break;
+			break;*/
 /*		case GLUT_KEY_UP :
 			up1 = 1;
 			break;*/
-        case GLUT_KEY_UP:
+/*        case GLUT_KEY_UP:
             if (!dead1)
 				fire1 = 1;
 			xLaser1 = xShip1;
@@ -177,25 +177,25 @@ void pressKeyNorm(unsigned char key, int x, int y)
 	switch (key)
 	{
 		case 'a' :
-			left2 = 1;
+			left1 = 1;
 			break;
 		case 'e' :
-			right2 = 1;
+			right1 = 1;
 			break;
-/*		case ',' :
-            up2 = 1;
-			break;*/
+		case ',' :
+            down1 = 1;
+			break;
 		case 'o' :
-			down2 = 1;
+			down1 = 1;
 			break;
-        case ',' :
-            if (!dead2)
-				fire2 = 1;
-			xLaser2 = xShip2;
-			yLaser2 = yShip2;
-			laserAngle2 = shipAngle2;
-			xLaserVel2 = 1.*cos(laserAngle2)+xVel2;
-			yLaserVel2 = 1.*sin(laserAngle2)+yVel2;
+        case ' ' :
+            if (!dead1)
+				fire1 = 1;
+			xLaser1 = xShip1;
+			yLaser1 = yShip1;
+			laserAngle1 = shipAngle1;
+			xLaserVel1 = 1.*cos(laserAngle1)+xVel1;
+			yLaserVel1 = 1.*sin(laserAngle1)+yVel1;
             break;
  /*       case '\'' :
             if (!dead2)
@@ -214,7 +214,7 @@ void pressKeyNorm(unsigned char key, int x, int y)
 
 void releaseKeySpec(int key, int x, int y)
 {
-	switch (key)
+/*	switch (key)
 	{
 		case GLUT_KEY_LEFT :
 			left1 = 0;
@@ -225,10 +225,10 @@ void releaseKeySpec(int key, int x, int y)
 /*		case GLUT_KEY_UP :
 			up1 = 0;
 			break;*/
-		case GLUT_KEY_DOWN :
+/*		case GLUT_KEY_DOWN :
 			down1 = 0;
 			break;
-	}
+	}*/
 }
 
 void releaseKeyNorm(unsigned char key, int x, int y)
@@ -236,16 +236,16 @@ void releaseKeyNorm(unsigned char key, int x, int y)
 	switch (key)
 	{
 		case 'a' :
-			left2 = 0;
+			left1 = 0;
 			break;
 		case 'e' :
-			right2 = 0;
+			right1 = 0;
 			break;
-/*		case ',' :
-			up2 = 0;
-			break;*/
+		case ',' :
+			down1 = 0;
+			break;
 		case 'o' :
-			down2 = 0;
+			down1 = 0;
 			break;
 	}
 }
@@ -382,6 +382,10 @@ void ship2AI(void)
 			right2 = 1;
 		}
 		down2 = 1;
+/*		if (angleFact < 0.5 && angleFact > -0.5)
+			down2 = 1;
+		else
+			down2 = 0;*/
 	}
 	else
 	{
@@ -398,7 +402,7 @@ void ship2AI(void)
 		}
 	}
 
-	if (!dead2 && !fire2 && angleFactShip < 0.2 && angleFactShip > -0.2)
+	if (!dead2 && !dead1 && !fire2 && angleFactShip < 0.2 && angleFactShip > -0.2)
 	{
 		fire2 = 1;
 		xLaser2 = xShip2;
@@ -504,7 +508,8 @@ void gravityLaser2(void)
 
 void detectLaserCollision(void)
 {
-	double a1, b1, c1, x1_1, x2_1, x3_1, y1_1, y2_1, y3_1, den1;
+	// triangle hitboxes are too small
+/*	double a1, b1, c1, x1_1, x2_1, x3_1, y1_1, y2_1, y3_1, den1;
 	double a2, b2, c2, x1_2, x2_2, x3_2, y1_2, y2_2, y3_2, den2;
 
     x1_1 = xShip1;
@@ -541,11 +546,95 @@ void detectLaserCollision(void)
     {
         fire1 = 0;
         dead2 = 1;
+    }*/
+
+	// use rectangles instead
+	double x00_1, x01_1, x10_1, x11_1;
+	double y00_1, y01_1, y10_1, y11_1;
+	double den1, a1, b1, c1;
+
+	double x00_2, x01_2, x10_2, x11_2;
+	double y00_2, y01_2, y10_2, y11_2;
+	double den2, a2, b2, c2;
+
+	// use 1/2 of width = 0.017
+
+	x00_1 = xShip1-0.017*cos(shipAngle1-M_PI/2.);
+	x01_1 = xShip1-0.017*cos(shipAngle1+M_PI/2.);
+	x10_1 = xShip1-0.1*cos(shipAngle1+0.17);
+	x11_1 = xShip1-0.1*cos(shipAngle1-0.17);
+
+	y00_1 = yShip1-0.017*sin(shipAngle1-M_PI/2.);
+	y01_1 = yShip1-0.017*sin(shipAngle1+M_PI/2.);
+	y10_1 = yShip1-0.1*sin(shipAngle1+0.17);
+	y11_1 = yShip1-0.1*sin(shipAngle1-0.17);
+
+    den1 = (y10_1-y11_1)*(x00_1-x11_1)+(x11_1-x10_1)*(y00_1-y11_1);
+    a1 = ((y10_1-y11_1)*(xLaser2-x11_1)+(x11_1-x10_1)*(yLaser2-y11_1))/den1;
+    b1 = ((y11_1-y00_1)*(xLaser2-x11_1)+(x00_1-x11_1)*(yLaser2-y11_1))/den1;
+    c1 = 1-a1-b1;
+
+    if (0 <= a1 && a1 <= 1 && 0 <= b1 && b1 <= 1 && 0 <= c1 && c1 <= 1)
+    {
+        fire2 = 0;
+        dead1 = 1;
     }
+
+    den1 = (y10_1-y11_1)*(x01_1-x11_1)+(x11_1-x10_1)*(y01_1-y11_1);
+    a1 = ((y10_1-y11_1)*(xLaser2-x11_1)+(x11_1-x10_1)*(yLaser2-y11_1))/den1;
+    b1 = ((y11_1-y01_1)*(xLaser2-x11_1)+(x01_1-x11_1)*(yLaser2-y11_1))/den1;
+    c1 = 1-a1-b1;
+
+    if (0 <= a1 && a1 <= 1 && 0 <= b1 && b1 <= 1 && 0 <= c1 && c1 <= 1)
+    {
+        fire2 = 0;
+        dead1 = 1;
+    }
+
+	x00_2 = xShip2-0.017*cos(shipAngle2-M_PI/2.);
+	x01_2 = xShip2-0.017*cos(shipAngle2+M_PI/2.);
+	x10_2 = xShip2-0.1*cos(shipAngle2+0.17);
+	x11_2 = xShip2-0.1*cos(shipAngle2-0.17);
+
+	y00_2 = yShip2-0.017*sin(shipAngle2-M_PI/2.);
+	y01_2 = yShip2-0.017*sin(shipAngle2+M_PI/2.);
+	y10_2 = yShip2-0.1*sin(shipAngle2+0.17);
+	y11_2 = yShip2-0.1*sin(shipAngle2-0.17);
+
+    den2 = (y10_2-y11_2)*(x00_2-x11_2)+(x11_2-x10_2)*(y00_2-y11_2);
+    a2 = ((y10_2-y11_2)*(xLaser1-x11_2)+(x11_2-x10_2)*(yLaser1-y11_2))/den2;
+    b2 = ((y11_2-y00_2)*(xLaser1-x11_2)+(x00_2-x11_2)*(yLaser1-y11_2))/den2;
+    c2 = 1-a2-b2;
+
+    if (0 <= a2 && a2 <= 1 && 0 <= b2 && b2 <= 1 && 0 <= c2 && c2 <= 1)
+    {
+        fire1 = 0;
+        dead2 = 1;
+    }
+
+    den2 = (y10_2-y11_2)*(x01_2-x11_2)+(x11_2-x10_2)*(y01_2-y11_2);
+    a2 = ((y10_2-y11_2)*(xLaser1-x11_2)+(x11_2-x10_2)*(yLaser1-y11_2))/den2;
+    b2 = ((y11_2-y01_2)*(xLaser1-x11_2)+(x01_2-x11_2)*(yLaser1-y11_2))/den2;
+    c2 = 1-a2-b2;
+
+    if (0 <= a2 && a2 <= 1 && 0 <= b2 && b2 <= 1 && 0 <= c2 && c2 <= 1)
+    {
+        fire1 = 0;
+        dead2 = 1;
+    }
+
 }
 
 void detectShipCollision(void)
 {
+	double shipDist;
+
+	shipDist = pow(xShip1-xShip2,2) + pow(yShip1-yShip2,2);
+	if (shipDist < 0.0025)
+	{
+		dead1 = 1;
+		dead2 = 1;
+	}
 
 }
 
@@ -676,7 +765,7 @@ void displayShip1(void)
 		{
 			glBegin(GL_LINES);
 				glColor3f(0.2,1.0,0.0);
-				glVertex2f(xShip1-0.07*cos(shipAngle1),yShip1-0.07*sin(shipAngle1));
+				glVertex2f(xShip1-0.08*cos(shipAngle1),yShip1-0.08*sin(shipAngle1));
 				glColor3f(1.0,0.2,0.0);
 				glVertex2f(xShip1-0.15*cos(shipAngle1),yShip1-0.15*sin(shipAngle1));
 			glEnd();
@@ -695,6 +784,30 @@ void displayShip1(void)
 				glVertex2f(xShip1-0.02*cos(shipAngle1-0.511),yShip1-0.02*sin(shipAngle1-0.511));
 			glEnd();
 		}*/
+		//Debugging hitbox
+		/*glBegin(GL_QUADS);
+				glColor3f(1.0, 0.0, 1.0);
+				glVertex2f(
+					xShip1-0.017*cos(shipAngle1-M_PI/2.),
+					yShip1-0.017*sin(shipAngle1-M_PI/2.)
+				);
+				glColor3f(0.0, 0.0, 1.0);
+				glVertex2f(
+					xShip1-0.017*cos(shipAngle1+M_PI/2.),
+					yShip1-0.017*sin(shipAngle1+M_PI/2.)
+				);
+				glColor3f(0.0, 1.0, 1.0);
+				glVertex2f(
+					xShip1-0.1*cos(shipAngle1+0.17),
+					yShip1-0.1*sin(shipAngle1+0.17)
+				);
+				glColor3f(1.0, 1.0, 0.0);
+				glVertex2f(
+					xShip1-0.1*cos(shipAngle1-0.17),
+					yShip1-0.1*sin(shipAngle1-0.17)
+				);
+		glEnd();*/
+
 	}
 	else
 	{
@@ -725,7 +838,7 @@ void displayShip2(void)
 		{
 			glBegin(GL_LINES);
 				glColor3f(0.2,1.0,0.0);
-				glVertex2f(xShip2-0.07*cos(shipAngle2),yShip2-0.07*sin(shipAngle2));
+				glVertex2f(xShip2-0.08*cos(shipAngle2),yShip2-0.08*sin(shipAngle2));
 				glColor3f(1.0,0.2,0.0);
 				glVertex2f(xShip2-0.15*cos(shipAngle2),yShip2-0.15*sin(shipAngle2));
 			glEnd();
