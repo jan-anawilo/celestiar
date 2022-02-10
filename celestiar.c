@@ -352,6 +352,67 @@ void ship2AI(void)
 	double angleFactShip;
 	double shipDist;
 
+	double delta_t, x_prime, y_prime, v_l;
+
+/*
+	t = (sqrt((-2 xShip2 xVel1 - 2 yShip2 yVel1 + 2 xVel1 x + 2 yVel1 y)^2
+	- 4 (-v_l^2 + xVel1^2 + yVel1^2) (xShip2^2 - 2 xShip2 x + yShip2^2
+	- 2 yShip2 y + x^2 + y^2))
+	+ 2 xShip2 xVel1 + 2 yShip2 yVel1
+	- 2 xVel1 x
+	- 2 yVel1 y)/(2 (-v_l^2 + xVel1^2 + yVel1^2))
+*/
+
+	// anticipated laser velocity
+/*	v_l = sqrt(
+		xVel2*xVel2 + yVel2*yVel2
+		+ 2*xVel2*cos(shipAngle2) + 2*yVel2*sin(shipAngle2)
+		+ 1.
+	);
+*/
+
+	// lead off calculation (what a doozy!)
+/*	v_l = 0.3 * velCoe * sqrt(
+		  1 + xVel2*xVel2 + yVel2*yVel2
+		+ 2.*xVel2*cos(shipAngle2)
+		+ 2.*yVel2*sin(shipAngle2)
+	);
+*/
+	v_l = velCoe;
+
+	delta_t = (
+		- sqrt(
+			pow(- 2.*xShip2*0.3*xVel1 - 2.*yShip2*0.3*yVel1 + 2.*0.3*xVel1*xShip1 + 2.*0.3*yVel1*yShip1, 2)
+			- 4.*(- v_l*v_l + 0.09*xVel1*xVel1 + 0.09*yVel1*yVel1)*(xShip2*xShip2
+			- 2.*xShip2*xShip1 + yShip2*yShip2
+			- 2.*yShip2*yShip1 + xShip1*xShip1 + yShip1*yShip1) // checks out
+		)
+		+ 2.*xShip2*0.3*xVel1 + 2.*yShip2*0.3*yVel1 - 2.*0.3*xVel1*xShip1 - 2.*0.3*yVel1*yShip1 // checks out
+	)
+	/ (
+		2.*(- v_l*v_l + 0.09*xVel1*xVel1 + 0.09*yVel1*yVel1) // checks out
+	);
+
+//	printf("%g\n", delta_t);
+	x_prime = xVel1 * delta_t + xShip1;
+	y_prime = yVel1 * delta_t + yShip1;
+
+	// adjust for center of hitbox
+	x_prime -= 0.05*cos(shipAngle1);
+	y_prime -= 0.05*sin(shipAngle1);
+
+	// check location of target
+/*	glColor3f(1.0,0.0,1.0);
+	glBegin(GL_POINTS);
+	glVertex2d(x_prime, y_prime);
+	glEnd();
+
+	glColor3f(1.0,1.0,1.0);
+	glBegin(GL_LINES);
+	glVertex2d(xShip2, yShip2);
+	glVertex2d(x_prime, y_prime);
+	glEnd();
+*/
 	if (xShip2 < 0.0)
 		gravityAngle = atan(yShip2/xShip2);
 	else
@@ -360,10 +421,10 @@ void ship2AI(void)
 	angleFact = sin(shipAngle2 - gravityAngle);
 //	angleFactShip = sin(shipAngle2 - shipAngle1);
 
-	if (xShip2 - xShip1 < 0.0)
-		shipAngle = atan((yShip2 - yShip1) / (xShip2 - xShip1));
+	if (xShip2 - x_prime < 0.0)
+		shipAngle = atan((yShip2 - y_prime) / (xShip2 - x_prime));
 	else
-		shipAngle = atan((yShip2 - yShip1) / (xShip2 - xShip1)) + M_PI;
+		shipAngle = atan((yShip2 - y_prime) / (xShip2 - x_prime)) + M_PI;
 
 	angleFactShip = sin(shipAngle2 - shipAngle);
 
