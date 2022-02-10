@@ -22,8 +22,6 @@ GLboolean down2 = 0;
 GLboolean fire2 = 0;
 GLboolean dead2 = 0;
 
-const double velCoe = 0.1;
-
 double xStar[35], yStar[35], starColor[35]; int starCount;
 
 double colorPulsar = 0.0;
@@ -38,6 +36,11 @@ double deathTick1 = 0.0, deathTick2 = 0.0;
 double deathAngle1[8], deathAngle2[8]; int deathCount1, deathCount2;
 
 unsigned int score1 = 0, score2 = 0;
+
+int triangle_collision(double x_test, double y_test,
+	double x_a, double y_a,
+	double x_b, double y_b,
+	double x_c, double y_c);
 
 /* WINDOW RESIZE FUNCTION */
 void resize(int w, int h);
@@ -105,6 +108,24 @@ int main(int argc, char **argv)
 	glutKeyboardUpFunc(releaseKeyNorm);
 
 	glutMainLoop();
+
+	return 0;
+}
+
+int triangle_collison(double x_test, double y_test,
+	double x_a, double y_a,
+	double x_b, double y_b,
+	double x_c, double y_c)
+{
+	double den, a, b, c;
+
+	den = (y_b-y_c)*(x_a-x_c)+(x_c-x_b)*(y_a-y_c);
+    a = ((y_b-y_c)*(x_test-x_c)+(x_c-x_b)*(y_test-y_c))/den;
+    b = ((y_c-y_a)*(x_test-x_c)+(x_a-x_c)*(y_test-y_c))/den;
+    c = 1-a-b;
+
+    if (0. <= a && a <= 1. && 0. <= b && b <= 1. && 0. <= c && c <= 1.)
+        return 1;
 
 	return 0;
 }
@@ -194,8 +215,8 @@ void pressKeyNorm(unsigned char key, int x, int y)
 			xLaser1 = xShip1;
 			yLaser1 = yShip1;
 			laserAngle1 = shipAngle1;
-			xLaserVel1 = 1.*cos(laserAngle1)+xVel1;
-			yLaserVel1 = 1.*sin(laserAngle1)+yVel1;
+			xLaserVel1 = 0.03*cos(laserAngle1);
+			yLaserVel1 = 0.03*sin(laserAngle1);
             break;
  /*       case '\'' :
             if (!dead2)
@@ -268,9 +289,9 @@ void generateStars(void)
 void moveShip1(void)
 {
 	if (left1 && !dead1)
-		shipAngle1 += 0.3*velCoe;
+		shipAngle1 += 0.03;
 	if (right1 && !dead1)
-		shipAngle1 -= 0.3*velCoe;
+		shipAngle1 -= 0.03;
 
 	if (shipAngle1 > 2*M_PI)
 		shipAngle1 = 0.0;
@@ -279,17 +300,12 @@ void moveShip1(void)
 
 	if (down1 && !dead1)
 	{
-		xVel1 += 0.0015*velCoe*cos(shipAngle1);
-		yVel1 += 0.0015*velCoe*sin(shipAngle1);
+		xVel1 += 0.00005 * cos(shipAngle1);
+		yVel1 += 0.00005 * sin(shipAngle1);
 	}
-	/*if (down1 && !dead1)
-	{
-		xVel1 -= 0.0005*velCoe*cos(shipAngle1);
-		yVel1 -= 0.0005*velCoe*sin(shipAngle1);
-	}*/
 
-	xShip1 += 0.3*xVel1;
-	yShip1 += 0.3*yVel1;
+	xShip1 += xVel1;
+	yShip1 += yVel1;
 
 	if (xShip1 >= 1.0)
 		xShip1 = -0.99;
@@ -299,20 +315,14 @@ void moveShip1(void)
 		yShip1 = -0.99;
 	if (yShip1 <= -1.0)
 		yShip1 = 0.99;
-    
-  /*  double distance, velocity, momentum;
-    distance = sqrt( pow(xShip1,2) + pow(yShip1,2) );
-    velocity = sqrt( pow(xVel1,2) + pow(yVel1,2) );
-    momentum = distance * velocity;
-    printf("%f\n", momentum);*/
 }
 
 void moveShip2(void)
 {
 	if (left2 && !dead2)
-		shipAngle2 += 0.3*velCoe;
+		shipAngle2 += 0.03;
 	if (right2 && !dead2)
-		shipAngle2 -= 0.3*velCoe;
+		shipAngle2 -= 0.03;
 
 	if (shipAngle2 > 2*M_PI)
 		shipAngle2 = 0.0;
@@ -321,17 +331,12 @@ void moveShip2(void)
 
 	if (down2 && !dead2)
 	{
-		xVel2 += 0.0015*velCoe*cos(shipAngle2);
-		yVel2 += 0.0015*velCoe*sin(shipAngle2);
+		xVel2 += 0.00005 * cos(shipAngle2);
+		yVel2 += 0.00005 * sin(shipAngle2);
 	}
-/*	if (down2 && !dead2)
-	{
-		xVel2 -= 0.0005*velCoe*cos(shipAngle2);
-		yVel2 -= 0.0005*velCoe*sin(shipAngle2);
-	}*/
 
-	xShip2 += 0.3*xVel2;
-	yShip2 += 0.3*yVel2;
+	xShip2 += xVel2;
+	yShip2 += yVel2;
 
 	if (xShip2 >= 1.0)
 		xShip2 = -0.99;
@@ -366,7 +371,7 @@ void ship2AI(void)
 	// anticipated laser velocity
 /*	v_l = sqrt(
 		xVel2*xVel2 + yVel2*yVel2
-		+ 2*xVel2*cos(shipAngle2) + 2*yVel2*sin(shipAngle2)
+		+ 2.*xVel2*cos(shipAngle2) + 2.*yVel2*sin(shipAngle2)
 		+ 1.
 	);
 */
@@ -378,19 +383,21 @@ void ship2AI(void)
 		+ 2.*yVel2*sin(shipAngle2)
 	);
 */
-	v_l = velCoe;
+//	v_l = velCoe;
+
+	v_l = 0.03;
 
 	delta_t = (
 		- sqrt(
-			pow(- 2.*xShip2*0.3*xVel1 - 2.*yShip2*0.3*yVel1 + 2.*0.3*xVel1*xShip1 + 2.*0.3*yVel1*yShip1, 2)
-			- 4.*(- v_l*v_l + 0.09*xVel1*xVel1 + 0.09*yVel1*yVel1)*(xShip2*xShip2
+			pow(- 2.*xShip2*xVel1 - 2.*yShip2*yVel1 + 2.*xVel1*xShip1 + 2.*yVel1*yShip1, 2)
+			- 4.*(- v_l*v_l + xVel1*xVel1 + yVel1*yVel1)*(xShip2*xShip2
 			- 2.*xShip2*xShip1 + yShip2*yShip2
 			- 2.*yShip2*yShip1 + xShip1*xShip1 + yShip1*yShip1) // checks out
 		)
-		+ 2.*xShip2*0.3*xVel1 + 2.*yShip2*0.3*yVel1 - 2.*0.3*xVel1*xShip1 - 2.*0.3*yVel1*yShip1 // checks out
+		+ 2.*xShip2*xVel1 + 2.*yShip2*yVel1 - 2.*xVel1*xShip1 - 2.*yVel1*yShip1 // checks out
 	)
 	/ (
-		2.*(- v_l*v_l + 0.09*xVel1*xVel1 + 0.09*yVel1*yVel1) // checks out
+		2.*(- v_l*v_l + xVel1*xVel1 + yVel1*yVel1) // checks out
 	);
 
 //	printf("%g\n", delta_t);
@@ -402,7 +409,7 @@ void ship2AI(void)
 	y_prime -= 0.05*sin(shipAngle1);
 
 	// check location of target
-/*	glColor3f(1.0,0.0,1.0);
+	glColor3f(1.0,0.0,1.0);
 	glBegin(GL_POINTS);
 	glVertex2d(x_prime, y_prime);
 	glEnd();
@@ -412,7 +419,7 @@ void ship2AI(void)
 	glVertex2d(xShip2, yShip2);
 	glVertex2d(x_prime, y_prime);
 	glEnd();
-*/
+
 	if (xShip2 < 0.0)
 		gravityAngle = atan(yShip2/xShip2);
 	else
@@ -469,8 +476,8 @@ void ship2AI(void)
 		xLaser2 = xShip2;
 		yLaser2 = yShip2;
 		laserAngle2 = shipAngle2;
-		xLaserVel2 = 1.*cos(laserAngle2)+xVel2;
-		yLaserVel2 = 1.*sin(laserAngle2)+yVel2;
+		xLaserVel2 = 0.03*cos(laserAngle2);
+		yLaserVel2 = 0.03*sin(laserAngle2);
 	}
 //	printf("%f\n", angleFactShip);
 }
@@ -479,8 +486,8 @@ void laser1(void)
 {
 	if (fire1)
 	{
-		xLaser1 += 0.3*velCoe*xLaserVel1;
-		yLaser1 += 0.3*velCoe*yLaserVel1;
+		xLaser1 += xLaserVel1;
+		yLaser1 += yLaserVel1;
 
 		if (xLaser1 <= -1.0 || xLaser1 >= 1.0 || yLaser1 <= -1.0 || yLaser1 >= 1.0)
 			fire1 = 0;
@@ -491,8 +498,8 @@ void laser2(void)
 {
 	if (fire2)
 	{
-		xLaser2 += 0.3*velCoe*xLaserVel2;
-		yLaser2 += 0.3*velCoe*yLaserVel2;
+		xLaser2 += xLaserVel2;
+		yLaser2 += yLaserVel2;
 
 		if (xLaser2 <= -1.0 || xLaser2 >= 1.0 || yLaser2 <= -1.0 || yLaser2 >= 1.0)
 			fire2 = 0;
@@ -510,8 +517,8 @@ void gravityShip1(void)
 
 	if (!dead1)
 	{
-		xVel1 += 0.00025/(pow(xShip1,2)+pow(yShip1,2))*velCoe*cos(gravityAngle);
-		yVel1 += 0.00025/(pow(xShip1,2)+pow(yShip1,2))*velCoe*sin(gravityAngle);
+		xVel1 += 0.0000075*cos(gravityAngle)/(pow(xShip1,2)+pow(yShip1,2));
+		yVel1 += 0.0000075*sin(gravityAngle)/(pow(xShip1,2)+pow(yShip1,2));
 	}
 	else
 	{
@@ -531,8 +538,8 @@ void gravityShip2(void)
 
 	if (!dead2)
 	{
-		xVel2 += 0.00025/(pow(xShip2,2)+pow(yShip2,2))*velCoe*cos(gravityAngle);
-		yVel2 += 0.00025/(pow(xShip2,2)+pow(yShip2,2))*velCoe*sin(gravityAngle);
+		xVel2 += 0.0000075*cos(gravityAngle)/(pow(xShip2,2)+pow(yShip2,2));
+		yVel2 += 0.0000075*sin(gravityAngle)/(pow(xShip2,2)+pow(yShip2,2));
 	}
 	else
 	{
@@ -550,8 +557,8 @@ void gravityLaser1(void)
 	else
 		gravityAngle = atan(yLaser1/xLaser1)+M_PI;
 
-	xLaserVel1 += 0.001/(pow(xLaser1,2)+pow(yLaser1,2))*velCoe*cos(gravityAngle);
-	yLaserVel1 += 0.001/(pow(xLaser1,2)+pow(yLaser1,2))*velCoe*sin(gravityAngle);
+	xLaserVel1 += 0.000075*cos(gravityAngle)/(pow(xLaser1,2)+pow(yLaser1,2));
+	yLaserVel1 += 0.000075*sin(gravityAngle)/(pow(xLaser1,2)+pow(yLaser1,2));
 }
 
 void gravityLaser2(void)
@@ -563,127 +570,46 @@ void gravityLaser2(void)
 	else
 		gravityAngle = atan(yLaser2/xLaser2)+M_PI;
 
-	xLaserVel2 += 0.001/(pow(xLaser2,2)+pow(yLaser2,2))*velCoe*cos(gravityAngle);
-	yLaserVel2 += 0.001/(pow(xLaser2,2)+pow(yLaser2,2))*velCoe*sin(gravityAngle);
+	xLaserVel2 += 0.001*cos(gravityAngle)/(pow(xLaser2,2)+pow(yLaser2,2));
+	yLaserVel2 += 0.001*sin(gravityAngle)/(pow(xLaser2,2)+pow(yLaser2,2));
 }
 
 void detectLaserCollision(void)
 {
-	// triangle hitboxes are too small
-/*	double a1, b1, c1, x1_1, x2_1, x3_1, y1_1, y2_1, y3_1, den1;
-	double a2, b2, c2, x1_2, x2_2, x3_2, y1_2, y2_2, y3_2, den2;
-
-    x1_1 = xShip1;
-    x2_1 = xShip1-0.1*cos(shipAngle1+0.17);
-    x3_1 = xShip1-0.1*cos(shipAngle1-0.17);
-    y1_1 = yShip1;
-    y2_1 = yShip1-0.1*sin(shipAngle1+0.17);
-    y3_1 = yShip1-0.1*sin(shipAngle1-0.17);
-
-    den1 = (y2_1-y3_1)*(x1_1-x3_1)+(x3_1-x2_1)*(y1_1-y3_1);
-    a1 = ((y2_1-y3_1)*(xLaser2-x3_1)+(x3_1-x2_1)*(yLaser2-y3_1))/den1;
-    b1 = ((y3_1-y1_1)*(xLaser2-x3_1)+(x1_1-x3_1)*(yLaser2-y3_1))/den1;
-    c1 = 1-a1-b1;
-
-    if (0 <= a1 && a1 <= 1 && 0 <= b1 && b1 <= 1 && 0 <= c1 && c1 <= 1)
-    {
-        fire2 = 0;
-        dead1 = 1;
-    }
-
-    x1_2 = xShip2;
-    x2_2 = xShip2-0.1*cos(shipAngle2+0.17);
-    x3_2 = xShip2-0.1*cos(shipAngle2-0.17);
-    y1_2 = yShip2;
-    y2_2 = yShip2-0.1*sin(shipAngle2+0.17);
-    y3_2 = yShip2-0.1*sin(shipAngle2-0.17);
-
-    den2 = (y2_2-y3_2)*(x1_2-x3_2)+(x3_2-x2_2)*(y1_2-y3_2);
-    a2 = ((y2_2-y3_2)*(xLaser1-x3_2)+(x3_2-x2_2)*(yLaser1-y3_2))/den2;
-    b2 = ((y3_2-y1_2)*(xLaser1-x3_2)+(x1_2-x3_2)*(yLaser1-y3_2))/den2;
-    c2 = 1-a2-b2;
-
-    if (0 <= a2 && a2 <= 1 && 0 <= b2 && b2 <= 1 && 0 <= c2 && c2 <= 1)
-    {
-        fire1 = 0;
-        dead2 = 1;
-    }*/
-
-	// use rectangles instead
-	double x00_1, x01_1, x10_1, x11_1;
-	double y00_1, y01_1, y10_1, y11_1;
-	double den1, a1, b1, c1;
-
-	double x00_2, x01_2, x10_2, x11_2;
-	double y00_2, y01_2, y10_2, y11_2;
-	double den2, a2, b2, c2;
-
 	// use 1/2 of width = 0.017
+	if (triangle_collison(xLaser2, yLaser2,
+		xShip1-0.017*cos(shipAngle1-M_PI/2.), yShip1-0.017*sin(shipAngle1-M_PI/2.),
+		xShip1-0.1*cos(shipAngle1-0.17), yShip1-0.1*sin(shipAngle1-0.17),
+		xShip1-0.1*cos(shipAngle1+0.17), yShip1-0.1*sin(shipAngle1+0.17)))
+	{
+		fire2 = 0;
+		dead1 = 1;
+	}
+	else if (triangle_collison(xLaser2, yLaser2,
+		xShip1-0.017*cos(shipAngle1-M_PI/2.), yShip1-0.017*sin(shipAngle1-M_PI/2.),
+		xShip1-0.017*cos(shipAngle1+M_PI/2.), yShip1-0.017*sin(shipAngle1+M_PI/2.),
+		xShip1-0.1*cos(shipAngle1+0.17), yShip1-0.1*sin(shipAngle1+0.17)))
+	{
+		fire2 = 0;
+		dead1 = 1;
+	}
 
-	x00_1 = xShip1-0.017*cos(shipAngle1-M_PI/2.);
-	x01_1 = xShip1-0.017*cos(shipAngle1+M_PI/2.);
-	x10_1 = xShip1-0.1*cos(shipAngle1+0.17);
-	x11_1 = xShip1-0.1*cos(shipAngle1-0.17);
-
-	y00_1 = yShip1-0.017*sin(shipAngle1-M_PI/2.);
-	y01_1 = yShip1-0.017*sin(shipAngle1+M_PI/2.);
-	y10_1 = yShip1-0.1*sin(shipAngle1+0.17);
-	y11_1 = yShip1-0.1*sin(shipAngle1-0.17);
-
-    den1 = (y10_1-y11_1)*(x00_1-x11_1)+(x11_1-x10_1)*(y00_1-y11_1);
-    a1 = ((y10_1-y11_1)*(xLaser2-x11_1)+(x11_1-x10_1)*(yLaser2-y11_1))/den1;
-    b1 = ((y11_1-y00_1)*(xLaser2-x11_1)+(x00_1-x11_1)*(yLaser2-y11_1))/den1;
-    c1 = 1-a1-b1;
-
-    if (0 <= a1 && a1 <= 1 && 0 <= b1 && b1 <= 1 && 0 <= c1 && c1 <= 1)
-    {
-        fire2 = 0;
-        dead1 = 1;
-    }
-
-    den1 = (y10_1-y11_1)*(x01_1-x11_1)+(x11_1-x10_1)*(y01_1-y11_1);
-    a1 = ((y10_1-y11_1)*(xLaser2-x11_1)+(x11_1-x10_1)*(yLaser2-y11_1))/den1;
-    b1 = ((y11_1-y01_1)*(xLaser2-x11_1)+(x01_1-x11_1)*(yLaser2-y11_1))/den1;
-    c1 = 1-a1-b1;
-
-    if (0 <= a1 && a1 <= 1 && 0 <= b1 && b1 <= 1 && 0 <= c1 && c1 <= 1)
-    {
-        fire2 = 0;
-        dead1 = 1;
-    }
-
-	x00_2 = xShip2-0.017*cos(shipAngle2-M_PI/2.);
-	x01_2 = xShip2-0.017*cos(shipAngle2+M_PI/2.);
-	x10_2 = xShip2-0.1*cos(shipAngle2+0.17);
-	x11_2 = xShip2-0.1*cos(shipAngle2-0.17);
-
-	y00_2 = yShip2-0.017*sin(shipAngle2-M_PI/2.);
-	y01_2 = yShip2-0.017*sin(shipAngle2+M_PI/2.);
-	y10_2 = yShip2-0.1*sin(shipAngle2+0.17);
-	y11_2 = yShip2-0.1*sin(shipAngle2-0.17);
-
-    den2 = (y10_2-y11_2)*(x00_2-x11_2)+(x11_2-x10_2)*(y00_2-y11_2);
-    a2 = ((y10_2-y11_2)*(xLaser1-x11_2)+(x11_2-x10_2)*(yLaser1-y11_2))/den2;
-    b2 = ((y11_2-y00_2)*(xLaser1-x11_2)+(x00_2-x11_2)*(yLaser1-y11_2))/den2;
-    c2 = 1-a2-b2;
-
-    if (0 <= a2 && a2 <= 1 && 0 <= b2 && b2 <= 1 && 0 <= c2 && c2 <= 1)
-    {
-        fire1 = 0;
-        dead2 = 1;
-    }
-
-    den2 = (y10_2-y11_2)*(x01_2-x11_2)+(x11_2-x10_2)*(y01_2-y11_2);
-    a2 = ((y10_2-y11_2)*(xLaser1-x11_2)+(x11_2-x10_2)*(yLaser1-y11_2))/den2;
-    b2 = ((y11_2-y01_2)*(xLaser1-x11_2)+(x01_2-x11_2)*(yLaser1-y11_2))/den2;
-    c2 = 1-a2-b2;
-
-    if (0 <= a2 && a2 <= 1 && 0 <= b2 && b2 <= 1 && 0 <= c2 && c2 <= 1)
-    {
-        fire1 = 0;
-        dead2 = 1;
-    }
-
+	if (triangle_collison(xLaser1, yLaser1,
+		xShip2-0.017*cos(shipAngle2-M_PI/2.), yShip2-0.017*sin(shipAngle2-M_PI/2.),
+		xShip2-0.1*cos(shipAngle2-0.17), yShip2-0.1*sin(shipAngle2-0.17),
+		xShip2-0.1*cos(shipAngle2+0.17), yShip2-0.1*sin(shipAngle2+0.17)))
+	{
+		fire1 = 0;
+		dead2 = 1;
+	}
+	else if (triangle_collison(xLaser1, yLaser1,
+		xShip2-0.017*cos(shipAngle2-M_PI/2.), yShip2-0.017*sin(shipAngle2-M_PI/2.),
+		xShip2-0.017*cos(shipAngle2+M_PI/2.), yShip2-0.017*sin(shipAngle2+M_PI/2.),
+		xShip2-0.1*cos(shipAngle2+0.17), yShip2-0.1*sin(shipAngle2+0.17)))
+	{
+		fire1 = 0;
+		dead2 = 1;
+	}
 }
 
 void detectShipCollision(void)
@@ -731,8 +657,8 @@ void deathShip1(void)
 			}
 		}
 
-		deathTick1 += 0.01*velCoe;
-		if (deathTick1 >= 1.5*velCoe)
+		deathTick1 += 0.001;
+		if (deathTick1 >= 0.15)
 		{
 			xVel1 = 0.0;
 			yVel1 = 0.0;
@@ -764,8 +690,8 @@ void deathShip2(void)
 			}
 		}
 
-		deathTick2 += 0.01*velCoe;
-		if (deathTick2 >= 1.5*velCoe)
+		deathTick2 += 0.001;
+		if (deathTick2 >= 0.15)
 		{
 			xVel2 = 0.0;
 			yVel2 = 0.0;
@@ -805,7 +731,7 @@ void displayPulsar(void)
 	}
 	glEnd();
 
-	colorPulsar += 2.0*velCoe;
+	colorPulsar += 0.2;
 	if (colorPulsar >= 6.28)
 		colorPulsar = 0.0;
 }
@@ -846,29 +772,29 @@ void displayShip1(void)
 			glEnd();
 		}*/
 		//Debugging hitbox
-		/*glBegin(GL_QUADS);
-				glColor3f(1.0, 0.0, 1.0);
+/*		glBegin(GL_QUADS);
+				glColor3f(1.0, 0.0, 0.0);
 				glVertex2f(
 					xShip1-0.017*cos(shipAngle1-M_PI/2.),
 					yShip1-0.017*sin(shipAngle1-M_PI/2.)
 				);
-				glColor3f(0.0, 0.0, 1.0);
+				glColor3f(0.0, 1.0, 0.0);
 				glVertex2f(
 					xShip1-0.017*cos(shipAngle1+M_PI/2.),
 					yShip1-0.017*sin(shipAngle1+M_PI/2.)
 				);
-				glColor3f(0.0, 1.0, 1.0);
+				glColor3f(0.0, 0.0, 1.0);
 				glVertex2f(
 					xShip1-0.1*cos(shipAngle1+0.17),
 					yShip1-0.1*sin(shipAngle1+0.17)
 				);
-				glColor3f(1.0, 1.0, 0.0);
+				glColor3f(1.0, 0.0, 1.0);
 				glVertex2f(
 					xShip1-0.1*cos(shipAngle1-0.17),
 					yShip1-0.1*sin(shipAngle1-0.17)
 				);
-		glEnd();*/
-
+		glEnd();
+*/
 	}
 	else
 	{
@@ -985,8 +911,8 @@ void renderScene(void)
 	laser2();
 	gravityShip1();
 	gravityShip2();
-	gravityLaser1();
-	gravityLaser2();
+//	gravityLaser1();
+//	gravityLaser2();
 	detectLaserCollision();
 	detectShipCollision();
 	detectPulsarCollision();
