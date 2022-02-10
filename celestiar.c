@@ -218,15 +218,6 @@ void pressKeyNorm(unsigned char key, int x, int y)
 			xLaserVel1 = 0.03*cos(laserAngle1);
 			yLaserVel1 = 0.03*sin(laserAngle1);
             break;
- /*       case '\'' :
-            if (!dead2)
-				fire2 = 1;
-			xLaser2 = xShip2;
-			yLaser2 = yShip2;
-			laserAngle2 = shipAngle2;
-			xLaserVel2 = 0.3*cos(laserAngle2);
-			yLaserVel2 = 0.3*sin(laserAngle2);
-            break;*/
 		case 27 :
 			exit(0);
 			break;
@@ -359,34 +350,8 @@ void ship2AI(void)
 
 	double delta_t, x_prime, y_prime, v_l;
 
-/*
-	t = (sqrt((-2 xShip2 xVel1 - 2 yShip2 yVel1 + 2 xVel1 x + 2 yVel1 y)^2
-	- 4 (-v_l^2 + xVel1^2 + yVel1^2) (xShip2^2 - 2 xShip2 x + yShip2^2
-	- 2 yShip2 y + x^2 + y^2))
-	+ 2 xShip2 xVel1 + 2 yShip2 yVel1
-	- 2 xVel1 x
-	- 2 yVel1 y)/(2 (-v_l^2 + xVel1^2 + yVel1^2))
-*/
-
-	// anticipated laser velocity
-/*	v_l = sqrt(
-		xVel2*xVel2 + yVel2*yVel2
-		+ 2.*xVel2*cos(shipAngle2) + 2.*yVel2*sin(shipAngle2)
-		+ 1.
-	);
-*/
-
 	// lead off calculation (what a doozy!)
-/*	v_l = 0.3 * velCoe * sqrt(
-		  1 + xVel2*xVel2 + yVel2*yVel2
-		+ 2.*xVel2*cos(shipAngle2)
-		+ 2.*yVel2*sin(shipAngle2)
-	);
-*/
-//	v_l = velCoe;
-
 	v_l = 0.03;
-
 	delta_t = (
 		- sqrt(
 			pow(- 2.*xShip2*xVel1 - 2.*yShip2*yVel1 + 2.*xVel1*xShip1 + 2.*yVel1*yShip1, 2)
@@ -400,7 +365,6 @@ void ship2AI(void)
 		2.*(- v_l*v_l + xVel1*xVel1 + yVel1*yVel1) // checks out
 	);
 
-//	printf("%g\n", delta_t);
 	x_prime = xVel1 * delta_t + xShip1;
 	y_prime = yVel1 * delta_t + yShip1;
 
@@ -409,7 +373,7 @@ void ship2AI(void)
 	y_prime -= 0.05*sin(shipAngle1);
 
 	// check location of target
-	glColor3f(1.0,0.0,1.0);
+/*	glColor3f(1.0,0.0,1.0);
 	glBegin(GL_POINTS);
 	glVertex2d(x_prime, y_prime);
 	glEnd();
@@ -419,14 +383,13 @@ void ship2AI(void)
 	glVertex2d(xShip2, yShip2);
 	glVertex2d(x_prime, y_prime);
 	glEnd();
-
+*/
 	if (xShip2 < 0.0)
 		gravityAngle = atan(yShip2/xShip2);
 	else
 		gravityAngle = atan(yShip2/xShip2) + M_PI;
 
 	angleFact = sin(shipAngle2 - gravityAngle);
-//	angleFactShip = sin(shipAngle2 - shipAngle1);
 
 	if (xShip2 - x_prime < 0.0)
 		shipAngle = atan((yShip2 - y_prime) / (xShip2 - x_prime));
@@ -450,10 +413,6 @@ void ship2AI(void)
 			right2 = 1;
 		}
 		down2 = 1;
-/*		if (angleFact < 0.5 && angleFact > -0.5)
-			down2 = 1;
-		else
-			down2 = 0;*/
 	}
 	else
 	{
@@ -479,7 +438,6 @@ void ship2AI(void)
 		xLaserVel2 = 0.03*cos(laserAngle2);
 		yLaserVel2 = 0.03*sin(laserAngle2);
 	}
-//	printf("%f\n", angleFactShip);
 }
 
 void laser1(void)
@@ -517,8 +475,8 @@ void gravityShip1(void)
 
 	if (!dead1)
 	{
-		xVel1 += 0.0000075*cos(gravityAngle)/(pow(xShip1,2)+pow(yShip1,2));
-		yVel1 += 0.0000075*sin(gravityAngle)/(pow(xShip1,2)+pow(yShip1,2));
+		xVel1 += 0.000008*cos(gravityAngle)/(pow(xShip1,2)+pow(yShip1,2));
+		yVel1 += 0.000008*sin(gravityAngle)/(pow(xShip1,2)+pow(yShip1,2));
 	}
 	else
 	{
@@ -538,8 +496,8 @@ void gravityShip2(void)
 
 	if (!dead2)
 	{
-		xVel2 += 0.0000075*cos(gravityAngle)/(pow(xShip2,2)+pow(yShip2,2));
-		yVel2 += 0.0000075*sin(gravityAngle)/(pow(xShip2,2)+pow(yShip2,2));
+		xVel2 += 0.000008*cos(gravityAngle)/(pow(xShip2,2)+pow(yShip2,2));
+		yVel2 += 0.000008*sin(gravityAngle)/(pow(xShip2,2)+pow(yShip2,2));
 	}
 	else
 	{
