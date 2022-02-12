@@ -19,21 +19,25 @@ struct Ship {
 
 	// bool for dead
 	int is_dead;
+	double death_tick, death_angle[8];
+	int death_count;
 
 	// for laser
 	double x_pos_laser, y_pos_laser;
 	double x_vel_laser, y_vel_laser;
 	double angle_laser;
+
+	// for color
+	double red, green, blue;
+
+	// for score
+	unsigned int score;
+
 } blue, red;
 
 double xStar[35], yStar[35], starColor[35]; int starCount;
 
 double colorPulsar = 0.0;
-
-double deathTick1 = 0.0, deathTick2 = 0.0;
-double deathAngle1[8], deathAngle2[8]; int deathCount1, deathCount2;
-
-unsigned int score1 = 0, score2 = 0;
 
 int triangle_collision(double x_test, double y_test,
 	double x_a, double y_a,
@@ -56,30 +60,25 @@ void releaseKeyNorm(unsigned char key, int x, int y);
 void generateStars(void);
 
 /* MECHANICS AND GAMEPLAY FUNCTIONS */
-void moveShip1(void);
-void moveShip2(void);
-void ship2AI(void);
-void laser1(void);
-void laser2(void);
-void gravityShip1(void);
-void gravityShip2(void);
-void gravityShip1(void);
-void gravityShip2(void);
+void moveShip(struct Ship *);
+void shipAI(struct Ship *, struct Ship *);
+void moveLaser(struct Ship *);
+void gravityShip(struct Ship *);
+void gravityLaser(struct Ship *);
+
 void detectLaserCollision(void);
 void detectShipCollision(void);
 void detectPulsarCollision(void);
 
-void deathShip1(void);
-void deathShip2(void);
+void deathShip(struct Ship *, struct Ship *);
 
 /* DISPLAY FUNCTIONS */
 void displayStars(void);
 void displayPulsar(void);
-void displayShip1(void);
-void displayShip2(void);
-void displayLaser1(void);
-void displayLaser2(void);
-void displayFuel(void);
+
+void displayShip(struct Ship *);
+void displayLaser(struct Ship *);
+
 void displayScores(void);
 
 void renderScene(void);
@@ -98,6 +97,12 @@ int main(int argc, char **argv)
 	blue.is_shooting = 0;
 	blue.is_dead = 0;
 
+	blue.red = 0.0;
+	blue.green = 1.0;
+	blue.blue = 1.0;
+
+	blue.score = 0;
+
 	red.x_pos = 0.7;
 	red.y_pos = 0.7;
 	red.x_vel = 0.0;
@@ -109,6 +114,12 @@ int main(int argc, char **argv)
 	red.right = 0;
 	red.is_shooting = 0;
 	red.is_dead = 0;
+
+	red.red = 1.0;
+	red.green = 0.0;
+	red.blue = 1.0;
+
+	red.score = 0;
 
 	generateStars();
 
@@ -167,51 +178,6 @@ void pressKeySpec(int key, int x, int y)
 {
 	switch (key)
 	{
-/*		case GLUT_KEY_LEFT :
-			blue.left = 1;
-			break;
-		case GLUT_KEY_RIGHT :
-			blue.right = 1;
-			break;*/
-/*		case GLUT_KEY_UP :
-			up1 = 1;
-			break;*/
-/*        case GLUT_KEY_UP:
-            if (!blue.is_dead)
-				blue.is_shooting = 1;
-			blue.x_pos_laser = blue.x_pos;
-			blue.y_pos_laser = blue.y_pos;
-			blue.angle_laser = blue.angle;
-			blue.x_vel_laser = 1.*cos(blue.angle_laser)+blue.x_vel;
-			blue.y_vel_laser = 1.*sin(blue.angle_laser)+blue.y_vel;
-            break;
-		case GLUT_KEY_DOWN :
-			blue.down = 1;
-			break;
-/*		case GLUT_KEY_F12 :
-			if (!blue.is_dead)
-				blue.is_shooting = 1;
-			blue.x_pos_laser = blue.x_pos;
-			blue.y_pos_laser = blue.y_pos;
-			blue.angle_laser = blue.angle;
-			blue.x_vel_laser = 0.3*cos(blue.angle_laser);
-			blue.y_vel_laser = 0.3*sin(blue.angle_laser);
-			break;
-		case GLUT_KEY_F1 :
-			if (!red.is_dead)
-				red.is_shooting = 1;
-			red.x_pos_laser = red.x_pos;
-			red.y_pos_laser = red.y_pos;
-			red.angle_laser = red.angle;
-			red.x_vel_laser = 0.3*cos(red.angle_laser);
-			red.y_vel_laser = 0.3*sin(red.angle_laser);
-			break;
-		case GLUT_KEY_F5 :
-			blue.is_dead = 1;
-			break;
-		case GLUT_KEY_F6 :
-			red.is_dead = 1;
-			break;*/
 	}
 }
 
@@ -248,21 +214,6 @@ void pressKeyNorm(unsigned char key, int x, int y)
 
 void releaseKeySpec(int key, int x, int y)
 {
-/*	switch (key)
-	{
-		case GLUT_KEY_LEFT :
-			blue.left = 0;
-			break;
-		case GLUT_KEY_RIGHT :
-			blue.right = 0;
-			break;
-/*		case GLUT_KEY_UP :
-			up1 = 0;
-			break;*/
-/*		case GLUT_KEY_DOWN :
-			blue.down = 0;
-			break;
-	}*/
 }
 
 void releaseKeyNorm(unsigned char key, int x, int y)
@@ -299,71 +250,39 @@ void generateStars(void)
 	}
 }
 
-void moveShip1(void)
+void moveShip(struct Ship *ship)
 {
-	if (blue.left && !blue.is_dead)
-		blue.angle += 0.03;
-	if (blue.right && !blue.is_dead)
-		blue.angle -= 0.03;
+	if (ship->left && !ship->is_dead)
+		ship->angle += 0.03;
+	if (ship->right && !ship->is_dead)
+		ship->angle -= 0.03;
 
-	if (blue.angle > 2*M_PI)
-		blue.angle = 0.0;
-	else if (blue.angle < 0.0)
-		blue.angle = 2*M_PI;
+	if (ship->angle > 2*M_PI)
+		ship->angle = 0.0;
+	else if (ship->angle < 0.0)
+		ship->angle = 2*M_PI;
 
-	if (blue.down && !blue.is_dead)
+	if (ship->down && !ship->is_dead)
 	{
-		blue.x_vel += 0.00005 * cos(blue.angle);
-		blue.y_vel += 0.00005 * sin(blue.angle);
+		ship->x_vel += 0.00005 * cos(ship->angle);
+		ship->y_vel += 0.00005 * sin(ship->angle);
 	}
 
-	blue.x_pos += blue.x_vel;
-	blue.y_pos += blue.y_vel;
+	ship->x_pos += ship->x_vel;
+	ship->y_pos += ship->y_vel;
 
-	if (blue.x_pos >= 1.0)
-		blue.x_pos = -0.99;
-	if (blue.x_pos <= -1.0)
-		blue.x_pos = 0.99;
-	if (blue.y_pos >= 1.0)
-		blue.y_pos = -0.99;
-	if (blue.y_pos <= -1.0)
-		blue.y_pos = 0.99;
+	if (ship->x_pos >= 1.0)
+		ship->x_pos = -0.99;
+	if (ship->x_pos <= -1.0)
+		ship->x_pos = 0.99;
+	if (ship->y_pos >= 1.0)
+		ship->y_pos = -0.99;
+	if (ship->y_pos <= -1.0)
+		ship->y_pos = 0.99;
 }
 
-void moveShip2(void)
+void shipAI(struct Ship *ship, struct Ship *other_ship)
 {
-	if (red.left && !red.is_dead)
-		red.angle += 0.03;
-	if (red.right && !red.is_dead)
-		red.angle -= 0.03;
-
-	if (red.angle > 2*M_PI)
-		red.angle = 0.0;
-	else if (red.angle < 0.0)
-		red.angle = 2*M_PI;
-
-	if (red.down && !red.is_dead)
-	{
-		red.x_vel += 0.00005 * cos(red.angle);
-		red.y_vel += 0.00005 * sin(red.angle);
-	}
-
-	red.x_pos += red.x_vel;
-	red.y_pos += red.y_vel;
-
-	if (red.x_pos >= 1.0)
-		red.x_pos = -0.99;
-	if (red.x_pos <= -1.0)
-		red.x_pos = 0.99;
-	if (red.y_pos >= 1.0)
-		red.y_pos = -0.99;
-	if (red.y_pos <= -1.0)
-		red.y_pos = 0.99;
-}
-
-void ship2AI(void)
-{
-/* STAY AWAY FROM PULSAR */
 	double gravityAngle;
 	double shipAngle;
 	double angleFact;
@@ -376,23 +295,23 @@ void ship2AI(void)
 	v_l = 0.03;
 	delta_t = (
 		- sqrt(
-			pow(- 2.*red.x_pos*blue.x_vel - 2.*red.y_pos*blue.y_vel + 2.*blue.x_vel*blue.x_pos + 2.*blue.y_vel*blue.y_pos, 2)
-			- 4.*(- v_l*v_l + blue.x_vel*blue.x_vel + blue.y_vel*blue.y_vel)*(red.x_pos*red.x_pos
-			- 2.*red.x_pos*blue.x_pos + red.y_pos*red.y_pos
-			- 2.*red.y_pos*blue.y_pos + blue.x_pos*blue.x_pos + blue.y_pos*blue.y_pos) // checks out
+			pow(- 2.*ship->x_pos*other_ship->x_vel - 2.*ship->y_pos*other_ship->y_vel + 2.*other_ship->x_vel*other_ship->x_pos + 2.*other_ship->y_vel*other_ship->y_pos, 2)
+			- 4.*(- v_l*v_l + other_ship->x_vel*other_ship->x_vel + other_ship->y_vel*other_ship->y_vel)*(ship->x_pos*ship->x_pos
+			- 2.*ship->x_pos*other_ship->x_pos + ship->y_pos*ship->y_pos
+			- 2.*ship->y_pos*other_ship->y_pos + other_ship->x_pos*other_ship->x_pos + other_ship->y_pos*other_ship->y_pos) // checks out
 		)
-		+ 2.*red.x_pos*blue.x_vel + 2.*red.y_pos*blue.y_vel - 2.*blue.x_vel*blue.x_pos - 2.*blue.y_vel*blue.y_pos // checks out
+		+ 2.*ship->x_pos*other_ship->x_vel + 2.*ship->y_pos*other_ship->y_vel - 2.*other_ship->x_vel*other_ship->x_pos - 2.*other_ship->y_vel*other_ship->y_pos // checks out
 	)
 	/ (
-		2.*(- v_l*v_l + blue.x_vel*blue.x_vel + blue.y_vel*blue.y_vel) // checks out
+		2.*(- v_l*v_l + other_ship->x_vel*other_ship->x_vel + other_ship->y_vel*other_ship->y_vel) // checks out
 	);
 
-	x_prime = blue.x_vel * delta_t + blue.x_pos;
-	y_prime = blue.y_vel * delta_t + blue.y_pos;
+	x_prime = other_ship->x_vel * delta_t + other_ship->x_pos;
+	y_prime = other_ship->y_vel * delta_t + other_ship->y_pos;
 
 	// adjust for center of hitbox
-	x_prime -= 0.05*cos(blue.angle);
-	y_prime -= 0.05*sin(blue.angle);
+	x_prime -= 0.05*cos(other_ship->angle);
+	y_prime -= 0.05*sin(other_ship->angle);
 
 	// check location of target
 /*	glColor3f(1.0,0.0,1.0);
@@ -402,161 +321,122 @@ void ship2AI(void)
 
 	glColor3f(1.0,1.0,1.0);
 	glBegin(GL_LINES);
-	glVertex2d(red.x_pos, red.y_pos);
+	glVertex2d(ship->x_pos, ship->y_pos);
 	glVertex2d(x_prime, y_prime);
 	glEnd();
 */
-	if (red.x_pos < 0.0)
-		gravityAngle = atan(red.y_pos/red.x_pos);
+	if (ship->x_pos < 0.0)
+		gravityAngle = atan(ship->y_pos/ship->x_pos);
 	else
-		gravityAngle = atan(red.y_pos/red.x_pos) + M_PI;
+		gravityAngle = atan(ship->y_pos/ship->x_pos) + M_PI;
 
-	angleFact = sin(red.angle - gravityAngle);
+	angleFact = sin(ship->angle - gravityAngle);
 
-	if (red.x_pos - x_prime < 0.0)
-		shipAngle = atan((red.y_pos - y_prime) / (red.x_pos - x_prime));
+	if (ship->x_pos - x_prime < 0.0)
+		shipAngle = atan((ship->y_pos - y_prime) / (ship->x_pos - x_prime));
 	else
-		shipAngle = atan((red.y_pos - y_prime) / (red.x_pos - x_prime)) + M_PI;
+		shipAngle = atan((ship->y_pos - y_prime) / (ship->x_pos - x_prime)) + M_PI;
 
-	angleFactShip = sin(red.angle - shipAngle);
+	angleFactShip = sin(ship->angle - shipAngle);
 
-	shipDist = sqrt(pow(red.x_pos,2)+pow(red.y_pos,2));
+	shipDist = sqrt(pow(ship->x_pos,2)+pow(ship->y_pos,2));
 
 	if (shipDist < 0.75)
 	{
 		if (angleFact > 0.0)
 		{
-			red.left = 1;
-			red.right = 0;
+			ship->left = 1;
+			ship->right = 0;
 		}
 		else
 		{
-			red.left = 0;
-			red.right = 1;
+			ship->left = 0;
+			ship->right = 1;
 		}
-		red.down = 1;
+		ship->down = 1;
 	}
 	else
 	{
-		red.down = 0;
+		ship->down = 0;
 		if (angleFactShip > 0.0)
 		{
-			red.left = 0;
-			red.right = 1;
+			ship->left = 0;
+			ship->right = 1;
 		}
 		else
 		{
-			red.left = 1;
-			red.right = 0;
+			ship->left = 1;
+			ship->right = 0;
 		}
 	}
 
-	if (!red.is_dead && !blue.is_dead && !red.is_shooting && angleFactShip < 0.2 && angleFactShip > -0.2)
+	if (!ship->is_dead && !other_ship->is_dead && !ship->is_shooting && angleFactShip < 0.2 && angleFactShip > -0.2)
 	{
-		red.is_shooting = 1;
-		red.x_pos_laser = red.x_pos;
-		red.y_pos_laser = red.y_pos;
-		red.angle_laser = red.angle;
-		red.x_vel_laser = 0.03*cos(red.angle_laser);
-		red.y_vel_laser = 0.03*sin(red.angle_laser);
+		ship->is_shooting = 1;
+		ship->x_pos_laser = ship->x_pos;
+		ship->y_pos_laser = ship->y_pos;
+		ship->angle_laser = ship->angle;
+		ship->x_vel_laser = 0.03*cos(ship->angle_laser);
+		ship->y_vel_laser = 0.03*sin(ship->angle_laser);
 	}
 }
 
-void laser1(void)
+void moveLaser(struct Ship *ship)
 {
-	if (blue.is_shooting)
+	if (ship->is_shooting)
 	{
-		blue.x_pos_laser += blue.x_vel_laser;
-		blue.y_pos_laser += blue.y_vel_laser;
+		ship->x_pos_laser += ship->x_vel_laser;
+		ship->y_pos_laser += ship->y_vel_laser;
 
-		if (blue.x_pos_laser <= -1.0 || blue.x_pos_laser >= 1.0 || blue.y_pos_laser <= -1.0 || blue.y_pos_laser >= 1.0)
-			blue.is_shooting = 0;
+		if (ship->x_pos_laser <= -1.0 || ship->x_pos_laser >= 1.0 || ship->y_pos_laser <= -1.0 || ship->y_pos_laser >= 1.0)
+			ship->is_shooting = 0;
+	}
+	else
+	{
+		ship->x_pos_laser = 0.0;
+		ship->y_pos_laser = 0.0;
+		ship->x_vel_laser = 0.0;
+		ship->y_vel_laser = 0.0;
 	}
 }
 
-void laser2(void)
-{
-	if (red.is_shooting)
-	{
-		red.x_pos_laser += red.x_vel_laser;
-		red.y_pos_laser += red.y_vel_laser;
-
-		if (red.x_pos_laser <= -1.0 || red.x_pos_laser >= 1.0 || red.y_pos_laser <= -1.0 || red.y_pos_laser >= 1.0)
-			red.is_shooting = 0;
-	}
-}
-
-void gravityShip1(void)
+void gravityShip(struct Ship *ship)
 {
 	double gravityAngle;
 
-	if (blue.x_pos < 0.0)
-		gravityAngle = atan(blue.y_pos/blue.x_pos);
+	if (ship->x_pos < 0.0)
+		gravityAngle = atan(ship->y_pos/ship->x_pos);
 	else
-		gravityAngle = atan(blue.y_pos/blue.x_pos)+M_PI;
+		gravityAngle = atan(ship->y_pos/ship->x_pos)+M_PI;
 
-	if (!blue.is_dead)
+	if (!ship->is_dead)
 	{
-		blue.x_vel += 0.000008*cos(gravityAngle)/(pow(blue.x_pos,2)+pow(blue.y_pos,2));
-		blue.y_vel += 0.000008*sin(gravityAngle)/(pow(blue.x_pos,2)+pow(blue.y_pos,2));
+		ship->x_vel += 0.000008*cos(gravityAngle)/(pow(ship->x_pos,2)+pow(ship->y_pos,2));
+		ship->y_vel += 0.000008*sin(gravityAngle)/(pow(ship->x_pos,2)+pow(ship->y_pos,2));
 	}
 	else
 	{
-		blue.x_vel = 0.0;
-		blue.y_vel = 0.0;
-	}
-}
-
-void gravityShip2(void)
-{
-	double gravityAngle;
-
-	if (red.x_pos < 0.0)
-		gravityAngle = atan(red.y_pos/red.x_pos);
-	else
-		gravityAngle = atan(red.y_pos/red.x_pos)+M_PI;
-
-	if (!red.is_dead)
-	{
-		red.x_vel += 0.000008*cos(gravityAngle)/(pow(red.x_pos,2)+pow(red.y_pos,2));
-		red.y_vel += 0.000008*sin(gravityAngle)/(pow(red.x_pos,2)+pow(red.y_pos,2));
-	}
-	else
-	{
-		red.x_vel = 0.0;
-		red.y_vel = 0.0;
+		ship->x_vel = 0.0;
+		ship->y_vel = 0.0;
 	}
 }
 
-void gravityLaser1(void)
+void gravityLaser(struct Ship *ship)
 {
 	double gravityAngle;
 
-	if (blue.x_pos_laser < 0.0)
-		gravityAngle = atan(blue.y_pos_laser/blue.x_pos_laser);
+	if (ship->x_pos_laser < 0.0)
+		gravityAngle = atan(ship->y_pos_laser/ship->x_pos_laser);
 	else
-		gravityAngle = atan(blue.y_pos_laser/blue.x_pos_laser)+M_PI;
+		gravityAngle = atan(ship->y_pos_laser/ship->x_pos_laser)+M_PI;
 
-	blue.x_vel_laser += 0.000075*cos(gravityAngle)/(pow(blue.x_pos_laser,2)+pow(blue.y_pos_laser,2));
-	blue.y_vel_laser += 0.000075*sin(gravityAngle)/(pow(blue.x_pos_laser,2)+pow(blue.y_pos_laser,2));
-}
-
-void gravityLaser2(void)
-{
-	double gravityAngle;
-
-	if (red.x_pos_laser < 0.0)
-		gravityAngle = atan(red.y_pos_laser/red.x_pos_laser);
-	else
-		gravityAngle = atan(red.y_pos_laser/red.x_pos_laser)+M_PI;
-
-	red.x_vel_laser += 0.001*cos(gravityAngle)/(pow(red.x_pos_laser,2)+pow(red.y_pos_laser,2));
-	red.y_vel_laser += 0.001*sin(gravityAngle)/(pow(red.x_pos_laser,2)+pow(red.y_pos_laser,2));
+	ship->x_vel_laser += 0.001*cos(gravityAngle)/(pow(ship->x_pos_laser,2)+pow(ship->y_pos_laser,2));
+	ship->y_vel_laser += 0.001*sin(gravityAngle)/(pow(ship->x_pos_laser,2)+pow(ship->y_pos_laser,2));
 }
 
 void detectLaserCollision(void)
 {
-	// use 1/2 of width = 0.017
+	// use 1/2 of width = 0.017 for small side of rectangular hitbox
 	if (triangle_collison(red.x_pos_laser, red.y_pos_laser,
 		blue.x_pos-0.017*cos(blue.angle-M_PI/2.), blue.y_pos-0.017*sin(blue.angle-M_PI/2.),
 		blue.x_pos-0.1*cos(blue.angle-0.17), blue.y_pos-0.1*sin(blue.angle-0.17),
@@ -624,68 +504,35 @@ void detectPulsarCollision(void)
 		red.is_shooting = 0;
 }
 
-void deathShip1(void)
+void deathShip(struct Ship *ship, struct Ship *other_ship)
 {
-	if (blue.is_dead)
+	if (ship->is_dead)
 	{
-		if (deathTick1 == 0.0)
+		if (ship->death_tick == 0.0)
 		{
-			score2++;
-			for (deathCount1 = 0; deathCount1 < 8; deathCount1++)
+			other_ship->score++;
+			for (ship->death_count = 0; ship->death_count < 8; ship->death_count++)
 			{
-				deathAngle1[deathCount1] = rand() % 1256 - 628;
+				ship->death_angle[ship->death_count] = rand() % 1256 - 628;
 			}
 		}
 
-		deathTick1 += 0.001;
-		if (deathTick1 >= 0.15)
+		ship->death_tick += 0.001;
+		if (ship->death_tick >= 0.15)
 		{
-			blue.x_vel = 0.0;
-			blue.y_vel = 0.0;
+			ship->x_vel = 0.0;
+			ship->y_vel = 0.0;
 
 			do
 			{
-					blue.x_pos = rand() % 200 - 99;
-				blue.x_pos /= 100;
-				blue.y_pos = rand() % 200 - 99;
-				blue.y_pos /= 100;
-			} while (blue.x_pos <= 0.5 && blue.x_pos >= -0.5 || blue.y_pos <= 0.5 && blue.y_pos >= -0.5);
+				ship->x_pos = rand() % 200 - 99;
+				ship->x_pos /= 100;
+				ship->y_pos = rand() % 200 - 99;
+				ship->y_pos /= 100;
+			} while (ship->x_pos <= 0.5 && ship->x_pos >= -0.5 || ship->y_pos <= 0.5 && ship->y_pos >= -0.5);
 
-			blue.is_dead = 0;
-			deathTick1 = 0.0;
-		}
-	}
-}
-
-void deathShip2(void)
-{
-	if (red.is_dead)
-	{
-		if (deathTick2 == 0.0)
-		{
-			score1++;
-			for (deathCount2 = 0; deathCount2 < 8; deathCount2++)
-			{
-				deathAngle2[deathCount2] = rand() % 1256 - 628;
-			}
-		}
-
-		deathTick2 += 0.001;
-		if (deathTick2 >= 0.15)
-		{
-			red.x_vel = 0.0;
-			red.y_vel = 0.0;
-
-			do
-			{
-				red.x_pos = rand() % 200 - 99;
-				red.x_pos /= 100;
-				red.y_pos = rand() % 200 - 99;
-				red.y_pos /= 100;
-			} while (red.x_pos <= 0.5 && red.x_pos >= -0.5 || red.y_pos <= 0.5 && red.y_pos >= -0.5);
-
-			red.is_dead = 0;
-			deathTick2 = 0.0;
+			ship->is_dead = 0;
+			ship->death_tick = 0.0;
 		}
 	}
 }
@@ -712,152 +559,53 @@ void displayPulsar(void)
 	glEnd();
 
 	colorPulsar += 0.2;
-	if (colorPulsar >= 6.28)
+	if (colorPulsar >= 2. * M_PI)
 		colorPulsar = 0.0;
 }
 
-void displayShip1(void)
+void displayShip(struct Ship *ship)
 {
-	if (!blue.is_dead)
+	if (!ship->is_dead)
 	{
-		glColor3f(0.0,0.0,1.0);
+		glColor3f(ship->red,ship->green,ship->blue);
 		glBegin(GL_QUADS);
-			glVertex2f(blue.x_pos,blue.y_pos);
-			glVertex2f(blue.x_pos-0.1*cos(blue.angle+0.17),blue.y_pos-0.1*sin(blue.angle+0.17));
-			glVertex2f(blue.x_pos-0.07*cos(blue.angle),blue.y_pos-0.07*sin(blue.angle));
-			glVertex2f(blue.x_pos-0.1*cos(blue.angle-0.17),blue.y_pos-0.1*sin(blue.angle-0.17));
+			glVertex2f(ship->x_pos,ship->y_pos);
+			glVertex2f(ship->x_pos-0.1*cos(ship->angle+0.17),ship->y_pos-0.1*sin(ship->angle+0.17));
+			glVertex2f(ship->x_pos-0.07*cos(ship->angle),ship->y_pos-0.07*sin(ship->angle));
+			glVertex2f(ship->x_pos-0.1*cos(ship->angle-0.17),ship->y_pos-0.1*sin(ship->angle-0.17));
 		glEnd();
 
-		if (blue.down)
+		if (ship->down)
 		{
 			glBegin(GL_LINES);
 				glColor3f(0.2,1.0,0.0);
-				glVertex2f(blue.x_pos-0.08*cos(blue.angle),blue.y_pos-0.08*sin(blue.angle));
+				glVertex2f(ship->x_pos-0.08*cos(ship->angle),ship->y_pos-0.08*sin(ship->angle));
 				glColor3f(1.0,0.2,0.0);
-				glVertex2f(blue.x_pos-0.15*cos(blue.angle),blue.y_pos-0.15*sin(blue.angle));
+				glVertex2f(ship->x_pos-0.15*cos(ship->angle),ship->y_pos-0.15*sin(ship->angle));
 			glEnd();
 		}
-	/*	if (blue.down)
-		{
-			glBegin(GL_LINES);
-				glColor3f(0.2,1.0,0.0);
-				glVertex2f(blue.x_pos-0.07*cos(blue.angle+0.17),blue.y_pos-0.07*sin(blue.angle+0.17));
-				glColor3f(1.0,0.2,0.0);
-				glVertex2f(blue.x_pos-0.02*cos(blue.angle+0.511),blue.y_pos-0.02*sin(blue.angle+0.511));
-
-				glColor3f(0.2,1.0,0.0);
-				glVertex2f(blue.x_pos-0.07*cos(blue.angle-0.17),blue.y_pos-0.07*sin(blue.angle-0.17));
-				glColor3f(1.0,0.2,0.0);
-				glVertex2f(blue.x_pos-0.02*cos(blue.angle-0.511),blue.y_pos-0.02*sin(blue.angle-0.511));
-			glEnd();
-		}*/
-		//Debugging hitbox
-/*		glBegin(GL_QUADS);
-				glColor3f(1.0, 0.0, 0.0);
-				glVertex2f(
-					blue.x_pos-0.017*cos(blue.angle-M_PI/2.),
-					blue.y_pos-0.017*sin(blue.angle-M_PI/2.)
-				);
-				glColor3f(0.0, 1.0, 0.0);
-				glVertex2f(
-					blue.x_pos-0.017*cos(blue.angle+M_PI/2.),
-					blue.y_pos-0.017*sin(blue.angle+M_PI/2.)
-				);
-				glColor3f(0.0, 0.0, 1.0);
-				glVertex2f(
-					blue.x_pos-0.1*cos(blue.angle+0.17),
-					blue.y_pos-0.1*sin(blue.angle+0.17)
-				);
-				glColor3f(1.0, 0.0, 1.0);
-				glVertex2f(
-					blue.x_pos-0.1*cos(blue.angle-0.17),
-					blue.y_pos-0.1*sin(blue.angle-0.17)
-				);
-		glEnd();
-*/
 	}
 	else
 	{
-		glColor3f(0.0,0.0,1.0);
+		glColor3f(ship->red,ship->green,ship->blue);
 		glPointSize(2.0);
 		glBegin(GL_POINTS);
-		for (deathCount1 = 0; deathCount1 < 8; deathCount1++)
+		for (ship->death_count = 0; ship->death_count < 8; ship->death_count++)
 		{
-			glVertex2f(blue.x_pos+deathTick1*cos(deathAngle1[deathCount1]/100),blue.y_pos+deathTick1*sin(deathAngle1[deathCount1]/100));
+			glVertex2f(ship->x_pos+ship->death_tick*cos(ship->death_angle[ship->death_count]/100),ship->y_pos+ship->death_tick*sin(ship->death_angle[ship->death_count]/100));
 		}
 		glEnd();
 	}
 }
 
-void displayShip2(void)
+void displayLaser(struct Ship *ship)
 {
-	if (!red.is_dead)
-	{
-		glColor3f(1.0,0.0,0.0);
-		glBegin(GL_QUADS);
-			glVertex2f(red.x_pos,red.y_pos);
-			glVertex2f(red.x_pos-0.1*cos(red.angle+0.17),red.y_pos-0.1*sin(red.angle+0.17));
-			glVertex2f(red.x_pos-0.07*cos(red.angle),red.y_pos-0.07*sin(red.angle));
-			glVertex2f(red.x_pos-0.1*cos(red.angle-0.17),red.y_pos-0.1*sin(red.angle-0.17));
-		glEnd();
-
-		if (red.down)
-		{
-			glBegin(GL_LINES);
-				glColor3f(0.2,1.0,0.0);
-				glVertex2f(red.x_pos-0.08*cos(red.angle),red.y_pos-0.08*sin(red.angle));
-				glColor3f(1.0,0.2,0.0);
-				glVertex2f(red.x_pos-0.15*cos(red.angle),red.y_pos-0.15*sin(red.angle));
-			glEnd();
-		}
-	/*	if (red.down)
-		{
-			glBegin(GL_LINES);
-				glColor3f(0.2,1.0,0.0);
-				glVertex2f(red.x_pos-0.07*cos(red.angle+0.17),red.y_pos-0.07*sin(red.angle+0.17));
-				glColor3f(1.0,0.2,0.0);
-				glVertex2f(red.x_pos-0.02*cos(red.angle+0.511),red.y_pos-0.02*sin(red.angle+0.511));
-
-				glColor3f(0.2,1.0,0.0);
-				glVertex2f(red.x_pos-0.07*cos(red.angle-0.17),red.y_pos-0.07*sin(red.angle-0.17));
-				glColor3f(1.0,0.2,0.0);
-				glVertex2f(red.x_pos-0.02*cos(red.angle-0.511),red.y_pos-0.02*sin(red.angle-0.511));
-			glEnd();
-		}*/
-	}
-	else
-	{
-		glColor3f(1.0,0.0,0.0);
-		glPointSize(2.0);
-		glBegin(GL_POINTS);
-		for (deathCount2 = 0; deathCount2 < 8; deathCount2++)
-		{
-			glVertex2f(red.x_pos+deathTick2*cos(deathAngle2[deathCount2]/100),red.y_pos+deathTick2*sin(deathAngle2[deathCount2]/100));
-		}
-		glEnd();
-	}
-}
-
-void displayLaser1(void)
-{
-	if (blue.is_shooting)
+	if (ship->is_shooting)
 	{
 		glColor3f(0.0,1.0,0.0);
 		glBegin(GL_LINES);
-			glVertex2f(blue.x_pos_laser,blue.y_pos_laser);
-			glVertex2f(blue.x_pos_laser-0.02*cos(blue.angle_laser),blue.y_pos_laser-0.02*sin(blue.angle_laser));
-		glEnd();
-	}
-}
-
-void displayLaser2(void)
-{
-	if (red.is_shooting)
-	{
-		glColor3f(0.0,1.0,0.0);
-		glBegin(GL_LINES);
-			glVertex2f(red.x_pos_laser,red.y_pos_laser);
-			glVertex2f(red.x_pos_laser-0.02*cos(red.angle_laser),red.y_pos_laser-0.02*sin(red.angle_laser));
+			glVertex2f(ship->x_pos_laser,ship->y_pos_laser);
+			glVertex2f(ship->x_pos_laser-0.02*cos(ship->angle_laser),ship->y_pos_laser-0.02*sin(ship->angle_laser));
 		glEnd();
 	}
 }
@@ -866,15 +614,15 @@ void displayScores(void)
 {
 	char cscore1[5], cscore2[5];
 
-	sprintf(cscore1, "%u", score1);
-	sprintf(cscore2, "%u", score2);
+	sprintf(cscore1, "%u", blue.score);
+	sprintf(cscore2, "%u", red.score);
 
-	glColor3f(0.0,0.0,1.0);
+	glColor3f(blue.red,blue.green,blue.blue);
 	glRasterPos2f(-0.9,0.9);
 	for (char* c = cscore1; *c != '\0'; c++)
 		glutBitmapCharacter(GLUT_BITMAP_9_BY_15,*c);
 
-	glColor3f(1.0,0.0,0.0);
+	glColor3f(red.red,red.green,red.blue);
 	glRasterPos2f(-0.7,0.9);
 	for (char* c = cscore2; *c != '\0'; c++)
 		glutBitmapCharacter(GLUT_BITMAP_9_BY_15,*c);
@@ -884,29 +632,43 @@ void renderScene(void)
 {
 	glClear(GL_COLOR_BUFFER_BIT);
 
-	moveShip1();
-	moveShip2();
-	ship2AI();
-	laser1();
-	laser2();
-	gravityShip1();
-	gravityShip2();
-//	gravitblue.y_pos_laser();
-//	gravitred.y_pos_laser();
+	// move the ships
+	moveShip(&blue);
+	moveShip(&red);
+
+	// AI function
+	shipAI(&blue, &red);
+	shipAI(&red, &blue);
+
+	// move the lasers
+	moveLaser(&blue);
+	moveLaser(&red);
+
+	// apply gravity
+	gravityShip(&blue);
+	gravityShip(&red);
+
+	// collision detection
 	detectLaserCollision();
 	detectShipCollision();
 	detectPulsarCollision();
 
-	deathShip1();
-	deathShip2();
+	// sequences if ships are dead
+	deathShip(&blue, &red);
+	deathShip(&red, &blue);
 
+	// display the field
 	displayStars();
 	displayPulsar();
 
-	displayShip1();
-	displayShip2();
-	displayLaser1();
-	displayLaser2();
+	// display the ships
+	displayShip(&blue);
+	displayShip(&red);
+
+	// display the lasers
+	displayLaser(&blue);
+	displayLaser(&red);
+
 	displayScores();
 
 	glFlush();
