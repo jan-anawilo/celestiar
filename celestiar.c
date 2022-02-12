@@ -35,9 +35,11 @@ struct Ship {
 
 } blue, red;
 
-double xStar[35], yStar[35], starColor[35]; int starCount;
-
-double colorPulsar = 0.0;
+struct StarField {
+	double xStar[35], yStar[35], starColor[35], starSize[35];
+	int starCount;
+	double colorPulsar;
+} star_field;
 
 int triangle_collision(double x_test, double y_test,
 	double x_a, double y_a,
@@ -57,7 +59,7 @@ void releaseKeySpec(int key, int x, int y);
 void releaseKeyNorm(unsigned char key, int x, int y);
 
 /* PRE-GENERATION FUNCTION */
-void generateStars(void);
+void generateStars(struct StarField *);
 
 /* MECHANICS AND GAMEPLAY FUNCTIONS */
 void moveShip(struct Ship *);
@@ -66,20 +68,20 @@ void moveLaser(struct Ship *);
 void gravityShip(struct Ship *);
 void gravityLaser(struct Ship *);
 
-void detectLaserCollision(void);
-void detectShipCollision(void);
-void detectPulsarCollision(void);
+void detectLaserCollision(struct Ship *, struct Ship *);
+void detectShipCollision(struct Ship *, struct Ship *);
+void detectPulsarCollision(struct Ship *, struct Ship *);
 
 void deathShip(struct Ship *, struct Ship *);
 
 /* DISPLAY FUNCTIONS */
-void displayStars(void);
-void displayPulsar(void);
+void displayStars(struct StarField *);
+void displayPulsar(struct StarField *);
 
 void displayShip(struct Ship *);
 void displayLaser(struct Ship *);
 
-void displayScores(void);
+void displayScores();
 
 void renderScene(void);
 
@@ -121,7 +123,7 @@ int main(int argc, char **argv)
 
 	red.score = 0;
 
-	generateStars();
+	generateStars(&star_field);
 
 	glutInit(&argc, argv);
 	glutInitDisplayMode(GLUT_SINGLE | GLUT_RGBA);
@@ -235,18 +237,21 @@ void releaseKeyNorm(unsigned char key, int x, int y)
 	}
 }
 
-void generateStars(void)
+void generateStars(struct StarField *starfield)
 {
 	srand(time(NULL));
-	for (starCount = 0; starCount <= 34; starCount++)
+	for (starfield->starCount = 0; starfield->starCount <= 34; starfield->starCount++)
 	{
-		starColor[starCount] = rand() % 9 + 2;
-		starColor[starCount] /=  10;
+		starfield->starColor[starfield->starCount] = rand() % 9 + 2;
+		starfield->starColor[starfield->starCount] /=  10.;
 
-		xStar[starCount] = rand() % 200 - 99;
-		xStar[starCount] /= 100;
-		yStar[starCount] = rand() % 200 - 99;
-		yStar[starCount] /= 100;
+		starfield->xStar[starfield->starCount] = rand() % 200 - 99;
+		starfield->xStar[starfield->starCount] /= 100.;
+		starfield->yStar[starfield->starCount] = rand() % 200 - 99;
+		starfield->yStar[starfield->starCount] /= 100.;
+
+		starfield->starSize[starfield->starCount] = rand() % 150 + 50;
+		starfield->starSize[starfield->starCount] /= 100.;
 	}
 }
 
@@ -434,73 +439,73 @@ void gravityLaser(struct Ship *ship)
 	ship->y_vel_laser += 0.001*sin(gravityAngle)/(pow(ship->x_pos_laser,2)+pow(ship->y_pos_laser,2));
 }
 
-void detectLaserCollision(void)
+void detectLaserCollision(struct Ship *ship, struct Ship *other_ship)
 {
 	// use 1/2 of width = 0.017 for small side of rectangular hitbox
-	if (triangle_collison(red.x_pos_laser, red.y_pos_laser,
-		blue.x_pos-0.017*cos(blue.angle-M_PI/2.), blue.y_pos-0.017*sin(blue.angle-M_PI/2.),
-		blue.x_pos-0.1*cos(blue.angle-0.17), blue.y_pos-0.1*sin(blue.angle-0.17),
-		blue.x_pos-0.1*cos(blue.angle+0.17), blue.y_pos-0.1*sin(blue.angle+0.17)))
+	if (triangle_collison(other_ship->x_pos_laser, other_ship->y_pos_laser,
+		ship->x_pos-0.017*cos(ship->angle-M_PI/2.), ship->y_pos-0.017*sin(ship->angle-M_PI/2.),
+		ship->x_pos-0.1*cos(ship->angle-0.17), ship->y_pos-0.1*sin(ship->angle-0.17),
+		ship->x_pos-0.1*cos(ship->angle+0.17), ship->y_pos-0.1*sin(ship->angle+0.17)))
 	{
-		red.is_shooting = 0;
-		blue.is_dead = 1;
+		other_ship->is_shooting = 0;
+		ship->is_dead = 1;
 	}
-	else if (triangle_collison(red.x_pos_laser, red.y_pos_laser,
-		blue.x_pos-0.017*cos(blue.angle-M_PI/2.), blue.y_pos-0.017*sin(blue.angle-M_PI/2.),
-		blue.x_pos-0.017*cos(blue.angle+M_PI/2.), blue.y_pos-0.017*sin(blue.angle+M_PI/2.),
-		blue.x_pos-0.1*cos(blue.angle+0.17), blue.y_pos-0.1*sin(blue.angle+0.17)))
+	else if (triangle_collison(other_ship->x_pos_laser, other_ship->y_pos_laser,
+		ship->x_pos-0.017*cos(ship->angle-M_PI/2.), ship->y_pos-0.017*sin(ship->angle-M_PI/2.),
+		ship->x_pos-0.017*cos(ship->angle+M_PI/2.), ship->y_pos-0.017*sin(ship->angle+M_PI/2.),
+		ship->x_pos-0.1*cos(ship->angle+0.17), ship->y_pos-0.1*sin(ship->angle+0.17)))
 	{
-		red.is_shooting = 0;
-		blue.is_dead = 1;
+		other_ship->is_shooting = 0;
+		ship->is_dead = 1;
 	}
 
-	if (triangle_collison(blue.x_pos_laser, blue.y_pos_laser,
-		red.x_pos-0.017*cos(red.angle-M_PI/2.), red.y_pos-0.017*sin(red.angle-M_PI/2.),
-		red.x_pos-0.1*cos(red.angle-0.17), red.y_pos-0.1*sin(red.angle-0.17),
-		red.x_pos-0.1*cos(red.angle+0.17), red.y_pos-0.1*sin(red.angle+0.17)))
+	if (triangle_collison(ship->x_pos_laser, ship->y_pos_laser,
+		other_ship->x_pos-0.017*cos(other_ship->angle-M_PI/2.), other_ship->y_pos-0.017*sin(other_ship->angle-M_PI/2.),
+		other_ship->x_pos-0.1*cos(other_ship->angle-0.17), other_ship->y_pos-0.1*sin(other_ship->angle-0.17),
+		other_ship->x_pos-0.1*cos(other_ship->angle+0.17), other_ship->y_pos-0.1*sin(other_ship->angle+0.17)))
 	{
-		blue.is_shooting = 0;
-		red.is_dead = 1;
+		ship->is_shooting = 0;
+		other_ship->is_dead = 1;
 	}
-	else if (triangle_collison(blue.x_pos_laser, blue.y_pos_laser,
-		red.x_pos-0.017*cos(red.angle-M_PI/2.), red.y_pos-0.017*sin(red.angle-M_PI/2.),
-		red.x_pos-0.017*cos(red.angle+M_PI/2.), red.y_pos-0.017*sin(red.angle+M_PI/2.),
-		red.x_pos-0.1*cos(red.angle+0.17), red.y_pos-0.1*sin(red.angle+0.17)))
+	else if (triangle_collison(ship->x_pos_laser, ship->y_pos_laser,
+		other_ship->x_pos-0.017*cos(other_ship->angle-M_PI/2.), other_ship->y_pos-0.017*sin(other_ship->angle-M_PI/2.),
+		other_ship->x_pos-0.017*cos(other_ship->angle+M_PI/2.), other_ship->y_pos-0.017*sin(other_ship->angle+M_PI/2.),
+		other_ship->x_pos-0.1*cos(other_ship->angle+0.17), other_ship->y_pos-0.1*sin(other_ship->angle+0.17)))
 	{
-		blue.is_shooting = 0;
-		red.is_dead = 1;
+		ship->is_shooting = 0;
+		other_ship->is_dead = 1;
 	}
 }
 
-void detectShipCollision(void)
+void detectShipCollision(struct Ship *ship, struct Ship *other_ship)
 {
 	double shipDist;
 
-	shipDist = pow(blue.x_pos-red.x_pos,2) + pow(blue.y_pos-red.y_pos,2);
-	if (shipDist < 0.0025 && !blue.is_dead && !red.is_dead)
+	shipDist = pow(ship->x_pos-other_ship->x_pos,2) + pow(ship->y_pos-other_ship->y_pos,2);
+	if (shipDist < 0.0025 && !ship->is_dead && !other_ship->is_dead)
 	{
-		blue.is_dead = 1;
-		red.is_dead = 1;
+		ship->is_dead = 1;
+		other_ship->is_dead = 1;
 	}
 }
 
-void detectPulsarCollision(void)
+void detectPulsarCollision(struct Ship *ship, struct Ship *other_ship)
 {
-	if (blue.x_pos >= -0.05 && blue.x_pos <= 0.05
-		&& blue.y_pos >= -0.05 && blue.y_pos <= 0.05)
-		blue.is_dead = 1;
+	if (ship->x_pos >= -0.05 && ship->x_pos <= 0.05
+		&& ship->y_pos >= -0.05 && ship->y_pos <= 0.05)
+		ship->is_dead = 1;
 
-	if (red.x_pos >= -0.05 && red.x_pos <= 0.05
-		&& red.y_pos >= -0.05 && red.y_pos <= 0.05)
-		red.is_dead = 1;
+	if (other_ship->x_pos >= -0.05 && other_ship->x_pos <= 0.05
+		&& other_ship->y_pos >= -0.05 && other_ship->y_pos <= 0.05)
+		other_ship->is_dead = 1;
 
-	if (blue.x_pos_laser <= 0.05 && blue.x_pos_laser >= -0.05
-		&& blue.y_pos_laser <= 0.05 && blue.y_pos_laser >= -0.05)
-		blue.is_shooting = 0;
+	if (ship->x_pos_laser <= 0.05 && ship->x_pos_laser >= -0.05
+		&& ship->y_pos_laser <= 0.05 && ship->y_pos_laser >= -0.05)
+		ship->is_shooting = 0;
 
-	if (red.x_pos_laser <= 0.05 && red.x_pos_laser >= -0.05
-		&& red.y_pos_laser <= 0.05 && red.y_pos_laser >= -0.05)
-		red.is_shooting = 0;
+	if (other_ship->x_pos_laser <= 0.05 && other_ship->x_pos_laser >= -0.05
+		&& other_ship->y_pos_laser <= 0.05 && other_ship->y_pos_laser >= -0.05)
+		other_ship->is_shooting = 0;
 }
 
 void deathShip(struct Ship *ship, struct Ship *other_ship)
@@ -536,20 +541,25 @@ void deathShip(struct Ship *ship, struct Ship *other_ship)
 	}
 }
 
-void displayStars(void)
+void displayStars(struct StarField *starfield)
 {
-	glBegin(GL_POINTS);
-	for (starCount = 0; starCount <= 34; starCount++)
-	{
-		glColor3f(starColor[starCount],starColor[starCount],starColor[starCount]);
-		glVertex2f(xStar[starCount],yStar[starCount]);
+	for (starfield->starCount = 0; starfield->starCount <= 34; starfield->starCount++)
+	{	
+		starfield->xStar[starfield->starCount] += 0.00005;
+		if (starfield->xStar[starfield->starCount] >= 1.)
+			starfield->xStar[starfield->starCount] = -1.;
+
+		glPointSize(starfield->starSize[starfield->starCount]);
+		glBegin(GL_POINTS);
+		glColor3f(starfield->starColor[starfield->starCount],starfield->starColor[starfield->starCount],starfield->starColor[starfield->starCount]);
+		glVertex2f(starfield->xStar[starfield->starCount],starfield->yStar[starfield->starCount]);
+		glEnd();
 	}
-	glEnd();
 }
 
-void displayPulsar(void)
+void displayPulsar(struct StarField *starfield)
 {
-	glColor3f(0.5*sin(colorPulsar)+0.5,0.5*sin(colorPulsar)+0.5,0.5*sin(colorPulsar)+0.5);
+	glColor3f(0.5*sin(starfield->colorPulsar)+0.5,0.5*sin(starfield->colorPulsar)+0.5,0.5*sin(starfield->colorPulsar)+0.5);
 	glBegin(GL_POLYGON);
 	for (double angle = 0.0; angle < 6.28; angle += 0.8)
 	{
@@ -557,9 +567,9 @@ void displayPulsar(void)
 	}
 	glEnd();
 
-	colorPulsar += 0.2;
-	if (colorPulsar >= 2. * M_PI)
-		colorPulsar = 0.0;
+	starfield->colorPulsar += 0.2;
+	if (starfield->colorPulsar >= 2. * M_PI)
+		starfield->colorPulsar = 0.0;
 }
 
 void displayShip(struct Ship *ship)
@@ -609,25 +619,25 @@ void displayLaser(struct Ship *ship)
 	}
 }
 
-void displayScores(void)
+void displayScores(struct Ship ship, struct Ship other_ship)
 {
 	char cscore1[5], cscore2[5];
 
-	sprintf(cscore1, "%u", blue.score);
-	sprintf(cscore2, "%u", red.score);
+	sprintf(cscore1, "%u", ship.score);
+	sprintf(cscore2, "%u", other_ship.score);
 
-	glColor3f(blue.red,blue.green,blue.blue);
+	glColor3f(ship.red,ship.green,ship.blue);
 	glRasterPos2f(-0.9,0.9);
 	for (char* c = cscore1; *c != '\0'; c++)
 		glutBitmapCharacter(GLUT_BITMAP_9_BY_15,*c);
 
-	glColor3f(red.red,red.green,red.blue);
+	glColor3f(other_ship.red,other_ship.green,other_ship.blue);
 	glRasterPos2f(-0.7,0.9);
 	for (char* c = cscore2; *c != '\0'; c++)
 		glutBitmapCharacter(GLUT_BITMAP_9_BY_15,*c);
 }
 
-void renderScene(void)
+void renderScene()
 {
 	glClear(GL_COLOR_BUFFER_BIT);
 
@@ -636,7 +646,7 @@ void renderScene(void)
 	moveShip(&red);
 
 	// AI function
-//	shipAI(&blue, &red);
+	shipAI(&blue, &red);
 	shipAI(&red, &blue);
 
 	// move the lasers
@@ -648,17 +658,17 @@ void renderScene(void)
 	gravityShip(&red);
 
 	// collision detection
-	detectLaserCollision();
-	detectShipCollision();
-	detectPulsarCollision();
+	detectLaserCollision(&blue, &red);
+	detectShipCollision(&blue, &red);
+	detectPulsarCollision(&blue, &red);
 
 	// sequences if ships are dead
 	deathShip(&blue, &red);
 	deathShip(&red, &blue);
 
 	// display the field
-	displayStars();
-	displayPulsar();
+	displayStars(&star_field);
+	displayPulsar(&star_field);
 
 	// display the ships
 	displayShip(&blue);
@@ -668,7 +678,7 @@ void renderScene(void)
 	displayLaser(&blue);
 	displayLaser(&red);
 
-	displayScores();
+	displayScores(blue, red);
 
 	glFlush();
 }
