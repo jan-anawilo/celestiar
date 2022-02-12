@@ -370,7 +370,7 @@ void shipAI(struct Ship *ship, struct Ship *other_ship)
 		}
 	}
 
-	if (!ship->is_dead && !other_ship->is_dead && !ship->is_shooting && angleFactShip < 0.2 && angleFactShip > -0.2)
+	if (!ship->is_dead && !other_ship->is_dead && !ship->is_shooting && angleFactShip < 0.05 && angleFactShip > -0.05)
 	{
 		ship->is_shooting = 1;
 		ship->x_pos_laser = ship->x_pos;
@@ -636,7 +636,7 @@ void renderScene(void)
 	moveShip(&red);
 
 	// AI function
-	shipAI(&blue, &red);
+//	shipAI(&blue, &red);
 	shipAI(&red, &blue);
 
 	// move the lasers
