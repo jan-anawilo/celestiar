@@ -477,12 +477,11 @@ void detectShipCollision(void)
 	double shipDist;
 
 	shipDist = pow(blue.x_pos-red.x_pos,2) + pow(blue.y_pos-red.y_pos,2);
-	if (shipDist < 0.0025)
+	if (shipDist < 0.0025 && !blue.is_dead && !red.is_dead)
 	{
 		blue.is_dead = 1;
 		red.is_dead = 1;
 	}
-
 }
 
 void detectPulsarCollision(void)
