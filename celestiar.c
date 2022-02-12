@@ -19,7 +19,7 @@ struct Ship {
 
 	// bool for dead
 	int is_dead;
-	double death_tick, death_angle[8];
+	double death_tick, death_angle[16];
 	int death_count;
 
 	// for laser
@@ -599,7 +599,7 @@ void displayShip(struct Ship *ship)
 		glColor3f(ship->red,ship->green,ship->blue);
 		glPointSize(2.0);
 		glBegin(GL_POINTS);
-		for (ship->death_count = 0; ship->death_count < 8; ship->death_count++)
+		for (ship->death_count = 0; ship->death_count < 16; ship->death_count++)
 		{
 			glVertex2f(ship->x_pos+ship->death_tick*cos(ship->death_angle[ship->death_count]/100),ship->y_pos+ship->death_tick*sin(ship->death_angle[ship->death_count]/100));
 		}
