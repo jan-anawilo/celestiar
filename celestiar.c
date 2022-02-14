@@ -81,7 +81,7 @@ void displayPulsar(struct StarField *);
 void displayShip(struct Ship *);
 void displayLaser(struct Ship *);
 
-void displayScores();
+void displayScores(struct Ship, struct Ship);
 
 void renderScene(void);
 
@@ -637,7 +637,7 @@ void displayScores(struct Ship ship, struct Ship other_ship)
 		glutBitmapCharacter(GLUT_BITMAP_9_BY_15,*c);
 }
 
-void renderScene()
+void renderScene(void)
 {
 	glClear(GL_COLOR_BUFFER_BIT);
 
