@@ -63,7 +63,7 @@ void generateStars(struct StarField *);
 
 /* MECHANICS AND GAMEPLAY FUNCTIONS */
 void moveShip(struct Ship *);
-void shipAI(struct Ship *, struct Ship *);
+void shipAI(struct Ship *, const struct Ship *);
 void moveLaser(struct Ship *);
 void gravityShip(struct Ship *);
 void gravityLaser(struct Ship *);
@@ -81,7 +81,7 @@ void displayPulsar(struct StarField *);
 void displayShip(struct Ship *);
 void displayLaser(struct Ship *);
 
-void displayScores(struct Ship, struct Ship);
+void displayScores(const struct Ship *, const struct Ship *);
 
 void renderScene(void);
 
@@ -286,7 +286,7 @@ void moveShip(struct Ship *ship)
 		ship->y_pos = 0.99;
 }
 
-void shipAI(struct Ship *ship, struct Ship *other_ship)
+void shipAI(struct Ship *ship, const struct Ship *other_ship)
 {
 	double gravityAngle;
 	double shipAngle;
@@ -480,10 +480,25 @@ void detectLaserCollision(struct Ship *ship, struct Ship *other_ship)
 void detectShipCollision(struct Ship *ship, struct Ship *other_ship)
 {
 	double shipDist;
+	double x_prime0, y_prime0, x_prime1, y_prime1;
 
-	shipDist = pow(ship->x_pos-other_ship->x_pos,2) + pow(ship->y_pos-other_ship->y_pos,2);
+	x_prime0 = ship->x_pos;
+	y_prime0 = ship->y_pos;
+
+	x_prime1 = other_ship->x_pos;
+	y_prime1 = other_ship->y_pos;
+
+	// adjust for center of hitbox
+	x_prime0 -= 0.05*cos(ship->angle);
+	y_prime0 -= 0.05*sin(ship->angle);
+
+	x_prime1 -= 0.05*cos(other_ship->angle);
+	y_prime1 -= 0.05*sin(other_ship->angle);
+
+	shipDist = pow(x_prime0 - x_prime1, 2) + pow(y_prime0 - y_prime1, 2);
 	if (shipDist < 0.0025 && !ship->is_dead && !other_ship->is_dead)
 	{
+		printf("Ship collision\n");
 		ship->is_dead = 1;
 		other_ship->is_dead = 1;
 	}
@@ -545,9 +560,12 @@ void displayStars(struct StarField *starfield)
 {
 	for (starfield->starCount = 0; starfield->starCount <= 34; starfield->starCount++)
 	{	
-		starfield->xStar[starfield->starCount] += 0.00005;
+		starfield->xStar[starfield->starCount] += 0.0005;
+		starfield->yStar[starfield->starCount] += 0.0001;
 		if (starfield->xStar[starfield->starCount] >= 1.)
 			starfield->xStar[starfield->starCount] = -1.;
+		if (starfield->yStar[starfield->starCount] >= 1.)
+			starfield->yStar[starfield->starCount] = -1.;
 
 		glPointSize(starfield->starSize[starfield->starCount]);
 		glBegin(GL_POINTS);
@@ -619,19 +637,19 @@ void displayLaser(struct Ship *ship)
 	}
 }
 
-void displayScores(struct Ship ship, struct Ship other_ship)
+void displayScores(const struct Ship *ship, const struct Ship *other_ship)
 {
 	char cscore1[5], cscore2[5];
 
-	sprintf(cscore1, "%u", ship.score);
-	sprintf(cscore2, "%u", other_ship.score);
+	sprintf(cscore1, "%u", ship->score);
+	sprintf(cscore2, "%u", other_ship->score);
 
-	glColor3f(ship.red,ship.green,ship.blue);
+	glColor3f(ship->red,ship->green,ship->blue);
 	glRasterPos2f(-0.9,0.9);
 	for (char* c = cscore1; *c != '\0'; c++)
 		glutBitmapCharacter(GLUT_BITMAP_9_BY_15,*c);
 
-	glColor3f(other_ship.red,other_ship.green,other_ship.blue);
+	glColor3f(other_ship->red,other_ship->green,other_ship->blue);
 	glRasterPos2f(-0.7,0.9);
 	for (char* c = cscore2; *c != '\0'; c++)
 		glutBitmapCharacter(GLUT_BITMAP_9_BY_15,*c);
@@ -678,7 +696,7 @@ void renderScene(void)
 	displayLaser(&blue);
 	displayLaser(&red);
 
-	displayScores(blue, red);
+	displayScores(&blue, &red);
 
 	glFlush();
 }
