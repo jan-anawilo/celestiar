@@ -358,6 +358,10 @@ void shipAI(struct Ship *ship, const struct Ship *other_ship)
 			ship->left = 0;
 			ship->right = 1;
 		}
+//		printf("%g\n", angleFact);
+//		if (angleFact < -0.9 || angleFact > 0.9)
+//			ship->down = 0;
+//		else
 		ship->down = 1;
 	}
 	else
@@ -498,7 +502,7 @@ void detectShipCollision(struct Ship *ship, struct Ship *other_ship)
 	shipDist = pow(x_prime0 - x_prime1, 2) + pow(y_prime0 - y_prime1, 2);
 	if (shipDist < 0.0025 && !ship->is_dead && !other_ship->is_dead)
 	{
-		printf("Ship collision\n");
+//		printf("Ship collision\n");
 		ship->is_dead = 1;
 		other_ship->is_dead = 1;
 	}
