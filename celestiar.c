@@ -190,13 +190,13 @@ void pressKeyNorm(unsigned char key, int x, int y)
 		case 'a' :
 			blue.left = 1;
 			break;
-		case 'e' :
+		case 'd' :
 			blue.right = 1;
 			break;
-		case ',' :
+		case 'w' :
             blue.down = 1;
 			break;
-		case 'o' :
+		case 's' :
 			blue.down = 1;
 			break;
         case ' ' :
@@ -225,13 +225,13 @@ void releaseKeyNorm(unsigned char key, int x, int y)
 		case 'a' :
 			blue.left = 0;
 			break;
-		case 'e' :
+		case 'd' :
 			blue.right = 0;
 			break;
-		case ',' :
+		case 'w' :
 			blue.down = 0;
 			break;
-		case 'o' :
+		case 's' :
 			blue.down = 0;
 			break;
 	}
@@ -641,8 +641,8 @@ void displayScores(const struct Ship *ship, const struct Ship *other_ship)
 {
 	char cscore1[5], cscore2[5];
 
-	sprintf(cscore1, "%u", ship->score);
-	sprintf(cscore2, "%u", other_ship->score);
+	snprintf(cscore1, sizeof(cscore1), "%u", ship->score);
+	snprintf(cscore2, sizeof(cscore2), "%u", other_ship->score);
 
 	glColor3f(ship->red,ship->green,ship->blue);
 	glRasterPos2f(-0.9,0.9);
@@ -664,7 +664,7 @@ void renderScene(void)
 	moveShip(&red);
 
 	// AI function
-	shipAI(&blue, &red);
+//	shipAI(&blue, &red);
 	shipAI(&red, &blue);
 
 	// move the lasers
